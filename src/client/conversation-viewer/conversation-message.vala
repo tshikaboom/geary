@@ -406,7 +406,11 @@ public class ConversationMessage : Gtk.Box {
         bool remote_images = false;
         string body_text = "";
         try {
-            body_text = message.get_body(Geary.RFC822.TextFormat.HTML, inline_image_replacer) ?? "";
+            if (message.has_html_body()) {
+                body_text = message.get_html_body(inline_image_replacer);
+            } else {
+                body_text = message.get_plain_body(true, inline_image_replacer);
+            }
         } catch (Error err) {
             debug("Could not get message text. %s", err.message);
         }
