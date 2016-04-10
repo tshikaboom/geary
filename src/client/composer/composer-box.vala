@@ -5,10 +5,12 @@
  */
 
 public class ComposerBox : Gtk.Frame, ComposerContainer {
-    
+
+
     private ComposerWidget composer;
-    private Gee.Set<Geary.App.Conversation>? prev_selection = null;
     private bool has_accel_group = false;
+    
+    public signal void vanished();
     
     public Gtk.Window top_window {
         get { return (Gtk.Window) get_toplevel(); }
@@ -25,11 +27,6 @@ public class ComposerBox : Gtk.Frame, ComposerContainer {
         get_style_context().add_class("geary-composer-box");
 
         if (composer.state == ComposerWidget.ComposerState.NEW) {
-            ConversationListView conversation_list_view = ((MainWindow) GearyApplication.
-                instance.controller.main_window).conversation_list_view;
-            prev_selection = conversation_list_view.get_selected_conversations();
-            conversation_list_view.get_selection().unselect_all();
-            
             composer.free_header();
             GearyApplication.instance.controller.main_window.main_toolbar.set_conversation_header(
                 composer.header);
@@ -72,7 +69,6 @@ public class ComposerBox : Gtk.Frame, ComposerContainer {
     
     public void vanish() {
         hide();
-        parent.hide();
         if (get_style_context().has_class("geary-full-pane"))
             GearyApplication.instance.controller.main_window.main_toolbar.remove_conversation_header(
                 composer.header);
@@ -80,23 +76,13 @@ public class ComposerBox : Gtk.Frame, ComposerContainer {
         composer.state = ComposerWidget.ComposerState.DETACHED;
         composer.editor.focus_in_event.disconnect(on_focus_in);
         composer.editor.focus_out_event.disconnect(on_focus_out);
-        
-        if (prev_selection != null) {
-            ConversationListView conversation_list_view = ((MainWindow) GearyApplication.
-                instance.controller.main_window).conversation_list_view;
-            if (prev_selection.is_empty)
-                // Need to trigger "No messages selected"
-                conversation_list_view.conversations_selected(prev_selection);
-            else
-                conversation_list_view.select_conversations(prev_selection);
-            prev_selection = null;
-        }
+
+        vanished();
     }
     
     public void close_container() {
         if (visible)
             vanish();
-        parent.remove(this);
     }
 }
 
