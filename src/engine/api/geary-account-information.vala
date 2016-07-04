@@ -58,7 +58,8 @@ public class Geary.AccountInformation : BaseObject {
      * Location account information is stored (as well as other data, including database and
      * attachment files.
      */
-    public File? settings_dir { get; private set; default = null; }
+    public File? storage_dir { get; private set; default = null; }
+    public File? config_dir { get; private set; default = null; }
     
     internal File? file = null;
     
@@ -166,10 +167,11 @@ public class Geary.AccountInformation : BaseObject {
     }
     
     // This constructor is used internally to load accounts from disk.
-    internal AccountInformation.from_file(File directory) {
-        this.email = directory.get_basename();
-        this.settings_dir = directory;
-        this.file = settings_dir.get_child(SETTINGS_FILENAME);
+    internal AccountInformation.from_file(File storage_directory, File config_directory) {
+        this.email = storage_directory.get_basename();
+        this.storage_dir = storage_directory;
+        this.config_dir = config_directory;
+        this.file = storage_dir.get_child(SETTINGS_FILENAME);
         
         KeyFile key_file = new KeyFile();
         try {
@@ -778,14 +780,14 @@ public class Geary.AccountInformation : BaseObject {
     }
     
     public async void store_async(Cancellable? cancellable = null) {
-        if (file == null || settings_dir == null) {
+        if (file == null || storage_dir == null) {
             warning("Cannot save account, no file set.\n");
             return;
         }
         
-        if (!settings_dir.query_exists(cancellable)) {
+        if (!storage_dir.query_exists(cancellable)) {
             try {
-                settings_dir.make_directory_with_parents();
+                storage_dir.make_directory_with_parents();
             } catch (Error err) {
                 error("Error creating settings directory for email '%s': %s", email,
                     err.message);
@@ -891,7 +893,7 @@ public class Geary.AccountInformation : BaseObject {
      * normally be invoked directly.
      */
     internal async void remove_async(Cancellable? cancellable = null) {
-        if (file == null || settings_dir == null) {
+        if (file == null || storage_dir == null) {
             warning("Cannot remove account; nothing to remove\n");
             return;
         }
@@ -903,7 +905,7 @@ public class Geary.AccountInformation : BaseObject {
         }
         
         // Delete files.
-        yield Files.recursive_delete_async(settings_dir, cancellable);
+        yield Files.recursive_delete_async(storage_dir, cancellable);
     }
     
     /**
