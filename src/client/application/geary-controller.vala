@@ -246,6 +246,9 @@ public class GearyController : Geary.BaseObject {
         // initialize revokable
         save_revokable(null, null);
         
+        // Migrate configuration if necessary.
+        XdgDir.migrate_configuration(GearyApplication.instance.get_user_data_directory(),
+            GearyApplication.instance.get_user_config_directory());
         // Start Geary.
         try {
             yield Geary.Engine.instance.open_async(GearyApplication.instance.get_user_data_directory(), 
