@@ -171,7 +171,7 @@ public class Geary.AccountInformation : BaseObject {
         this.email = storage_directory.get_basename();
         this.storage_dir = storage_directory;
         this.config_dir = config_directory;
-        this.file = storage_dir.get_child(SETTINGS_FILENAME);
+        this.file = config_dir.get_child(SETTINGS_FILENAME);
         
         KeyFile key_file = new KeyFile();
         try {
@@ -780,16 +780,25 @@ public class Geary.AccountInformation : BaseObject {
     }
     
     public async void store_async(Cancellable? cancellable = null) {
-        if (file == null || storage_dir == null) {
+        if (file == null || config_dir == null) {
             warning("Cannot save account, no file set.\n");
             return;
+        }
+        
+        if (!config_dir.query_exists(cancellable)) {
+            try {
+                config_dir.make_directory_with_parents();
+            } catch (Error err) {
+                error("Error creating configuration directory for email '%s': %s", email,
+                    err.message);
+            }
         }
         
         if (!storage_dir.query_exists(cancellable)) {
             try {
                 storage_dir.make_directory_with_parents();
             } catch (Error err) {
-                error("Error creating settings directory for email '%s': %s", email,
+                error("Error creating storage directory for email '%s': %s", email,
                     err.message);
             }
         }
@@ -893,9 +902,16 @@ public class Geary.AccountInformation : BaseObject {
      * normally be invoked directly.
      */
     internal async void remove_async(Cancellable? cancellable = null) {
-        if (file == null || storage_dir == null) {
-            warning("Cannot remove account; nothing to remove\n");
-            return;
+        if (storage_dir == null) {
+            warning("Cannot remove account storage directory; nothing to remove");
+        } else {
+            yield Files.recursive_delete_async(storage_dir, cancellable);
+        }
+        
+        if (config_dir == null) {
+            warning("Cannot remove account configuration directory; nothing to remove");
+        } else {
+            yield Files.recursive_delete_async(config_dir, cancellable);
         }
         
         try {
@@ -903,9 +919,6 @@ public class Geary.AccountInformation : BaseObject {
         } catch (Error e) {
             debug("Error clearing SMTP password: %s", e.message);
         }
-        
-        // Delete files.
-        yield Files.recursive_delete_async(storage_dir, cancellable);
     }
     
     /**
