@@ -11,7 +11,7 @@ public class FolderList.AccountBranch : Sidebar.Branch {
     public Gee.HashMap<Geary.FolderPath, FolderEntry> folder_entries { get; private set; }
     
     public AccountBranch(Geary.Account account) {
-        base(new Sidebar.Header(account.information.nickname),
+        base(new Sidebar.Header(account.information.email),
             Sidebar.Branch.Options.NONE, normal_folder_comparator, special_folder_comparator);
         
         bool rtl = Gtk.Widget.get_default_direction() == Gtk.TextDirection.RTL;
@@ -20,7 +20,7 @@ public class FolderList.AccountBranch : Sidebar.Branch {
         user_folder_group = new SpecialGrouping(2, "", rtl ? "tag-rtl-symbolic" : "tag-symbolic");
         folder_entries = new Gee.HashMap<Geary.FolderPath, FolderEntry>();
         
-        account.information.notify["nickname"].connect(on_nicknamed_changed);
+//        account.information.notify["email"].connect(on_nicknamed_changed);
         
         graft(get_root(), user_folder_group);
         
@@ -28,12 +28,12 @@ public class FolderList.AccountBranch : Sidebar.Branch {
     }
     
     ~AccountBranch() {
-        account.information.notify["nickname"].disconnect(on_nicknamed_changed);
+//        account.information.notify["email"].disconnect(on_nicknamed_changed);
         entry_removed.disconnect(on_entry_removed);
     }
     
-    private void on_nicknamed_changed() {
-        ((Sidebar.Grouping) get_root()).rename(account.information.nickname);
+    private void on_email_changed() {
+        ((Sidebar.Grouping) get_root()).rename(account.information.email);
     }
     
     private static int special_grouping_comparator(Sidebar.Entry a, Sidebar.Entry b) {

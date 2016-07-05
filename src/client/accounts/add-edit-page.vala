@@ -638,6 +638,7 @@ public class AddEditPage : Gtk.Box {
     }
     
     public Geary.AccountInformation? get_account_information() {
+        Geary.AccountInformation original_account;
         Geary.AccountInformation account_information;
         fix_credentials_for_supported_provider();
         
@@ -647,7 +648,7 @@ public class AddEditPage : Gtk.Box {
             (smtp_use_imap_credentials ? imap_password.strip() : smtp_password.strip()));
         
         try {
-            Geary.AccountInformation original_account = Geary.Engine.instance.get_accounts().get(email_address);
+            original_account = Geary.Engine.instance.get_accounts().get(email_address);
             if (original_account == null) {
                 // New account.
                 account_information = Geary.Engine.instance.create_orphan_account(email_address);
@@ -662,7 +663,6 @@ public class AddEditPage : Gtk.Box {
         }
         
         account_information.real_name = real_name.strip();
-        account_information.nickname = nickname.strip();
         account_information.imap_credentials = imap_credentials;
         account_information.smtp_credentials = smtp_credentials;
         account_information.imap_remember_password = remember_password;
@@ -683,6 +683,14 @@ public class AddEditPage : Gtk.Box {
         account_information.save_drafts = save_drafts;
         account_information.use_email_signature = use_email_signature;
         account_information.email_signature = email_signature;
+        if (original_account == null) {
+            // Create a new nickname for the account.
+            // For the time being, let's hash together any string we can find with the current time
+            string to_hash = real_name + email_address + imap_host + smtp_host + Gdk.CURRENT_TIME.to_string();
+            account_information.nickname = GLib.Checksum.compute_for_string(GLib.ChecksumType.MD5, to_hash, to_hash.len());
+        } else {
+            account_information.nickname = nickname.strip();
+        }
         
         if (smtp_noauth)
             account_information.smtp_credentials = null;

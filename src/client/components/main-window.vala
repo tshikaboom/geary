@@ -339,7 +339,7 @@ public class MainWindow : Gtk.ApplicationWindow {
             return;
         }
         
-        main_toolbar.account = current_folder.account.information.nickname;
+        main_toolbar.account = current_folder.account.information.email;
         
         /// Current folder's name followed by its unread count, i.e. "Inbox (42)"
         // except for Drafts and Outbox, where we show total count
