@@ -171,7 +171,7 @@ public class AddEditPage : Gtk.Box {
     private Gtk.ComboBoxText combo_service;
     private Gtk.CheckButton check_remember_password;
     private Gtk.CheckButton check_save_sent_mail;
-    private Gtk.Button alternate_email_button;
+    private Gtk.ToggleButton alternate_email_button;
 
     // Signature
     private Gtk.Box composer_container;
@@ -218,7 +218,7 @@ public class AddEditPage : Gtk.Box {
     
     public signal void size_changed();
     
-    public signal void edit_alternate_emails();
+    public signal void edit_alternate_emails(Gtk.ToggleButton button);
     
     public AddEditPage() {
         Object(orientation: Gtk.Orientation.VERTICAL, spacing: 4);
@@ -244,7 +244,7 @@ public class AddEditPage : Gtk.Box {
         entry_password = (Gtk.Entry) builder.get_object("entry: password");
         check_remember_password = (Gtk.CheckButton) builder.get_object("check: remember_password");
         check_save_sent_mail = (Gtk.CheckButton) builder.get_object("check: save_sent_mail");
-        alternate_email_button = (Gtk.Button) builder.get_object("button: edit_alternate_email");
+        alternate_email_button = (Gtk.ToggleButton) builder.get_object("button: edit_alternate_email");
         label_error = (Gtk.Label) builder.get_object("label: error");
         other_info = (Gtk.Alignment) builder.get_object("container: other_info");
         
@@ -334,7 +334,7 @@ public class AddEditPage : Gtk.Box {
         check_smtp_use_imap_credentials.toggled.connect(on_changed);
         check_smtp_noauth.toggled.connect(on_changed);
         check_save_drafts.toggled.connect(on_changed);
-        alternate_email_button.clicked.connect(on_alternate_email_button_clicked);
+        alternate_email_button.toggled.connect(on_alternate_email_button_toggled);
         
         entry_email.changed.connect(on_email_changed);
         entry_password.changed.connect(on_password_changed);
@@ -507,8 +507,8 @@ public class AddEditPage : Gtk.Box {
         info_changed();
     }
     
-    private void on_alternate_email_button_clicked() {
-        edit_alternate_emails();
+    private void on_alternate_email_button_toggled(Gtk.ToggleButton button) {
+        edit_alternate_emails(alternate_email_button);
     }
     
     // Prevent non-printable characters in nickname field.
@@ -536,6 +536,10 @@ public class AddEditPage : Gtk.Box {
         }
     }
     
+    public void set_alternate_toggle(bool state) {
+        alternate_email_button.set_active(false);
+    }
+
     private void on_imap_encryption_changed() {
         if (edited_imap_port)
             return;

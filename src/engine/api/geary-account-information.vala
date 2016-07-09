@@ -544,7 +544,7 @@ public class Geary.AccountInformation : BaseObject {
         
         return yield prompt_passwords_async(unset_services);
     }
-    
+
     private void check_mediator_instance() throws EngineError {
         if (Geary.Engine.instance.authentication_mediator == null)
             throw new EngineError.OPEN_REQUIRED(

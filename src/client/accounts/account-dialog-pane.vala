@@ -8,11 +8,13 @@
 // Could be factored into a generic "StackPage" class if needed.
 public class AccountDialogPane : Gtk.Box {
     private weak Gtk.Stack parent_stack;
-    
-    public class AccountDialogPane(Gtk.Stack parent_stack) {
+    private weak Gtk.Window parent_window;
+
+    public class AccountDialogPane(Gtk.Stack parent_stack, Gtk.Window? parent_window = null) {
         Object(orientation: Gtk.Orientation.VERTICAL, spacing: 4);
         
         this.parent_stack = parent_stack;
+        this.parent_window = parent_window;
         parent_stack.add(this);
     }
     

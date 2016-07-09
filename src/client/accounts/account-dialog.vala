@@ -13,7 +13,6 @@ public class AccountDialog : Gtk.Dialog {
     private AccountDialogSpinnerPane spinner_pane;
     private AccountDialogRemoveConfirmPane remove_confirm_pane;
     private AccountDialogRemoveFailPane remove_fail_pane;
-    private AccountDialogEditAlternateEmailsPane edit_alternate_emails_pane;
     private Gtk.HeaderBar headerbar = new Gtk.HeaderBar();
     
     public AccountDialog(Gtk.Window parent) {
@@ -30,11 +29,10 @@ public class AccountDialog : Gtk.Dialog {
         
         // Add pages to stack.
         account_list_pane = new AccountDialogAccountListPane(stack);
-        add_edit_pane = new AccountDialogAddEditPane(stack);
+        add_edit_pane = new AccountDialogAddEditPane(stack, this);
         spinner_pane = new AccountDialogSpinnerPane(stack);
         remove_confirm_pane = new AccountDialogRemoveConfirmPane(stack);
         remove_fail_pane = new AccountDialogRemoveFailPane(stack);
-        edit_alternate_emails_pane = new AccountDialogEditAlternateEmailsPane(stack);
         
         // Connect signals from pages.
         account_list_pane.add_account.connect(on_add_account);
@@ -43,11 +41,9 @@ public class AccountDialog : Gtk.Dialog {
         add_edit_pane.ok.connect(on_save_add_or_edit);
         add_edit_pane.cancel.connect(on_cancel_back_to_list);
         add_edit_pane.size_changed.connect(() => { resize(1, 1); });
-        add_edit_pane.edit_alternate_emails.connect(on_edit_alternate_emails);
         remove_confirm_pane.ok.connect(on_delete_account_confirmed);
         remove_confirm_pane.cancel.connect(on_cancel_back_to_list);
         remove_fail_pane.ok.connect(on_cancel_back_to_list);
-        edit_alternate_emails_pane.done.connect(on_done_back_to_editor);
         
         // Set default page.
         account_list_pane.present();
@@ -66,7 +62,7 @@ public class AccountDialog : Gtk.Dialog {
     
     // Grab the account info.  While the addresses passed into this method should *always* be
     // available in Geary, we double-check to be defensive.
-    private Geary.AccountInformation? get_account_info_for_email(string email_address) {
+    public static Geary.AccountInformation? get_account_info_for_email(string email_address) {
     Gee.Map<string, Geary.AccountInformation> accounts;
         try {
             accounts = Geary.Engine.instance.get_accounts();
@@ -136,14 +132,6 @@ public class AccountDialog : Gtk.Dialog {
         }
     }
     
-    private void on_edit_alternate_emails(string email_address) {
-        Geary.AccountInformation? account_info = get_account_info_for_email(email_address);
-        if (account_info == null)
-            return;
-        
-        edit_alternate_emails_pane.set_account(account_info);
-        edit_alternate_emails_pane.present();
-    }
     
     private void on_delete_account_confirmed(Geary.AccountInformation? account) {
         assert(account != null); // Should not be able to happen since we checked earlier.
@@ -211,8 +199,5 @@ public class AccountDialog : Gtk.Dialog {
         account_list_pane.present();
     }
     
-    private void on_done_back_to_editor() {
-        add_edit_pane.present();
-    }
 }
 

@@ -305,8 +305,8 @@
           </packing>
         </child>
         <child>
-          <object class="GtkButton" id="button: edit_alternate_email">
-            <property name="label" translatable="yes">Addi_tional email addresses…</property>
+          <object class="GtkToggleButton" id="button: edit_alternate_email">
+            <property name="label" translatable="yes">Addi_tional email addresses...</property>
             <property name="can_focus">True</property>
             <property name="receives_default">True</property>
             <property name="use_underline">True</property>
@@ -319,7 +319,8 @@
           </packing>
         </child>
         <child>
-          <placeholder/>
+          <placeholder>
+          </placeholder>
         </child>
         <child>
           <placeholder/>

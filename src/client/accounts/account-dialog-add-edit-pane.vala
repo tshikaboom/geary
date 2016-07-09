@@ -10,6 +10,8 @@ public class AccountDialogAddEditPane : AccountDialogPane {
     private Gtk.ButtonBox button_box = new Gtk.ButtonBox(Gtk.Orientation.HORIZONTAL);
     private Gtk.Button ok_button = new Gtk.Button.with_mnemonic(Stock._OK);
     private Gtk.Button cancel_button = new Gtk.Button.with_mnemonic(Stock._CANCEL);
+    private AccountDialogEditAlternateEmailsPane edit_alternate_emails_pane;
+    private Gtk.Dialog alternates_dialog;
     
     public signal void ok(Geary.AccountInformation info);
     
@@ -17,10 +19,27 @@ public class AccountDialogAddEditPane : AccountDialogPane {
     
     public signal void size_changed();
     
-    public signal void edit_alternate_emails(string email_address);
-    
-    public AccountDialogAddEditPane(Gtk.Stack stack) {
-        base(stack);
+
+    public AccountDialogAddEditPane(Gtk.Stack stack, Gtk.Window parent_window) {
+        base(stack, parent_window);
+        edit_alternate_emails_pane = new AccountDialogEditAlternateEmailsPane(null);
+        alternates_dialog = new Gtk.Dialog();
+        alternates_dialog.set_transient_for(parent_window);
+        alternates_dialog.get_content_area().pack_start(edit_alternate_emails_pane, true, true, 0);
+        alternates_dialog.set_default_response(1);
+        Gtk.HeaderBar hb = new Gtk.HeaderBar();
+        alternates_dialog.set_titlebar(hb);
+        hb.set_title("Email Addresses");
+        Gtk.Button yesbutton = new Gtk.Button.with_label("OK");
+        Gtk.Button nobutton = new Gtk.Button.with_label("Cancel");
+        yesbutton.get_style_context().add_class("suggested-action");
+        yesbutton.set_size_request(73, -1);
+        nobutton.set_size_request(73, -1);
+        hb.pack_start(nobutton);
+        hb.pack_end(yesbutton);
+        hb.show_all();
+        edit_alternate_emails_pane.done.connect(on_done);
+        edit_alternate_emails_pane.info_changed.connect(() => { present(); });
         
         button_box.set_layout(Gtk.ButtonBoxStyle.END);
         button_box.expand = false;
@@ -38,7 +57,7 @@ public class AccountDialogAddEditPane : AccountDialogPane {
         cancel_button.clicked.connect(() => { cancel(); });
         
         add_edit_page.size_changed.connect(() => { size_changed(); });
-        add_edit_page.edit_alternate_emails.connect(() => { edit_alternate_emails(add_edit_page.email_address); });
+        add_edit_page.edit_alternate_emails.connect(on_edit_alternate_emails);
         
         pack_start(add_edit_page);
         pack_start(button_box, false, false);
@@ -79,8 +98,22 @@ public class AccountDialogAddEditPane : AccountDialogPane {
         on_info_changed();
     }
     
+    private void on_edit_alternate_emails(Gtk.ToggleButton button) {
+        Geary.AccountInformation? account_info = AccountDialog.get_account_info_for_email(add_edit_page.get_account_information().id);
+        if (account_info == null)
+            return;
+
+        edit_alternate_emails_pane.set_account(account_info);
+        alternates_dialog.run();
+}
+    private void on_done() {
+        add_edit_page.update_ui();
+    }
+
     private void on_info_changed() {
-        ok_button.has_default = ok_button.sensitive = add_edit_page.is_complete();
+//        add_edit_page.primary_mailbox.address = edit_alternate_emails_pane.get_account_information().primary_mailbox.address;
+//        stdout.printf("addeditpage pref add %s\n", add_edit_page.primary_address);
+        add_edit_page.update_ui();
     }
 }
 
