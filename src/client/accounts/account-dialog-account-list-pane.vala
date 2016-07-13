@@ -126,18 +126,18 @@ public class AccountDialogAccountListPane : AccountDialogPane {
     }
     
     private void on_account_added(Geary.AccountInformation account) {
-        Gtk.TreeIter? iter = list_contains(account.email);
+        Gtk.TreeIter? iter = list_contains(account.id);
         if (iter != null)
             return; // Already listed.
         
-        add_account_to_list(account.nickname, account.email);
+        add_account_to_list(account.nickname, account.id);
         account.notify.connect(on_account_changed);
         update_buttons();
         update_ordinals();
     }
     
     private void on_account_removed(Geary.AccountInformation account) {
-        remove_account_from_list(account.email);
+        remove_account_from_list(account.id);
         account.notify.disconnect(on_account_changed);
         update_buttons();
         update_ordinals();
@@ -164,7 +164,7 @@ public class AccountDialogAccountListPane : AccountDialogPane {
     private void on_account_changed(Object object, ParamSpec p) {
         Geary.AccountInformation account = (Geary.AccountInformation) object;
         
-        Gtk.TreeIter? iter = list_contains(account.email);
+        Gtk.TreeIter? iter = list_contains(account.id);
         if (iter == null)
             return;
         
