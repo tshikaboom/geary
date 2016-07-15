@@ -13,8 +13,8 @@
 public class Geary.Imap.AuthenticateCommand : Command {
     public const string NAME = "authenticate";
     
-    public AuthenticateCommand(string method, string data) {
-        base (NAME, {method, data});
+    public AuthenticateCommand(string data) {
+        base (NAME, {"XOAUTH2", data});
      }
 
     public override string to_string() {

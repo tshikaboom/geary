@@ -198,6 +198,8 @@ public class AddEditPage : Gtk.Box {
     
     private Gtk.CheckButton check_save_drafts;
     
+    private AccountDialogOauth2Prompt oauth2prompt;
+
     private string smtp_username_store;
     private string smtp_password_store;
     
@@ -207,6 +209,7 @@ public class AddEditPage : Gtk.Box {
     
     private bool edited_imap_port = false;
     private bool edited_smtp_port = false;
+    private bool has_token = false;
     
     private Geary.Engine.ValidationResult last_validation_result = Geary.Engine.ValidationResult.OK;
     
@@ -353,6 +356,10 @@ public class AddEditPage : Gtk.Box {
         
         // Reset the "first update" flag when the window is mapped.
         map.connect(() => { first_ui_update = true; });
+
+        oauth2prompt = new AccountDialogOauth2Prompt();
+        oauth2prompt.prompt_accepted.connect(() => { has_token = true; update_ui(); });
+        pack_end(oauth2prompt, true, true, 0);
     }
     
     // Sets the account information to display on this page.
@@ -625,7 +632,14 @@ public class AddEditPage : Gtk.Box {
                     return false;
             break;
             
-            // GMAIL, YAHOO, and OUTLOOK
+            // We only ever need the email address with Gmail.
+            case Geary.ServiceProvider.GMAIL:
+                if (Geary.String.is_empty_or_whitespace(nickname) ||
+                    Geary.String.is_empty_or_whitespace(email_address))
+                    return false;
+            break;
+
+            // YAHOO and OUTLOOK
             default:
                 if (Geary.String.is_empty_or_whitespace(nickname) ||
                     Geary.String.is_empty_or_whitespace(email_address) ||
@@ -719,15 +733,27 @@ public class AddEditPage : Gtk.Box {
             label_password.hide();
             entry_password.hide();
             other_info.show();
+            oauth2prompt.hide();
             set_other_info_sensitive(true);
             check_remember_password.label = _("Remem_ber passwords"); // Plural
         } else {
             // For special-cased providers, only display necessary info.
-            label_password.show();
-            entry_password.show();
-            other_info.hide();
-            set_other_info_sensitive(mode == PageMode.WELCOME);
-            check_remember_password.label = _("Remem_ber password");
+            if (get_service_provider() != Geary.ServiceProvider.GMAIL) {
+                label_password.show();
+                entry_password.show();
+                other_info.hide();
+                oauth2prompt.hide();
+            }
+            else {
+                label_password.hide();
+                entry_password.hide();
+                other_info.hide();
+                check_remember_password.hide();
+                if (!has_token)
+                    oauth2prompt.show();
+                else
+                    oauth2prompt.hide();
+            }
         }
         
         // In edit mode, certain fields are not sensitive.

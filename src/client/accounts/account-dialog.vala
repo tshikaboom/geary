@@ -156,15 +156,35 @@ public class AccountDialog : Gtk.Dialog {
     private void on_save_add_or_edit(Geary.AccountInformation info) {
         // Show the busy spinner.
         spinner_pane.present();
+        AddEditPage.PageMode mode = add_edit_pane.get_mode();
         
         // determine if editing an existing Account or adding a new one
-        Geary.Engine.ValidationOption options = (add_edit_pane.get_mode() == AddEditPage.PageMode.EDIT)
+        Geary.Engine.ValidationOption options = (mode == AddEditPage.PageMode.EDIT)
             ? Geary.Engine.ValidationOption.UPDATING_EXISTING
             : Geary.Engine.ValidationOption.NONE;
-        
+/*
+        // Are we adding a Gmail account?
+        if (mode == AddEditPage.PageMode.ADD && info.service_provider == Geary.ServiceProvider.GMAIL) {
+            info.needs_token = true;
+            AccountDialogOauth2Prompt prompt = new AccountDialogOauth2Prompt(info.email);
+            prompt.set_transient_for(this);
+//            prompt.token_mutex.lock();
+            string? token = prompt.get_token();
+            if (token != null) {
+                info.token = token;
+                info.token_credentials = new Geary.Credentials(info.email, info.token);
+                info.token_credentials.is_token = true;
+            }
+            else {
+                stdout.printf("supposedly token = %s\n", token);
+                // Can't log in. Geary will bail out somehow.
+            }
+        }
+*/
+
         // For account edits, we only need to validate the connection if the credentials have changed.
         bool validate_connection = true;
-        if (add_edit_pane.get_mode() == AddEditPage.PageMode.EDIT && info.is_copy()) {
+        if (mode == AddEditPage.PageMode.EDIT && info.is_copy()) {
             Geary.AccountInformation? real_info =
                 GearyApplication.instance.controller.get_real_account_information(info);
             if (real_info != null) {

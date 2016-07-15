@@ -280,7 +280,11 @@ public class Geary.Engine : BaseObject {
         
         if (!error_code.is_all_set(ValidationResult.IMAP_CONNECTION_FAILED)) {
             try {
-                yield imap_session.initiate_session_async(account.imap_credentials, cancellable);
+                if (account.needs_token) {
+                    yield imap_session.initiate_session_async(account.token_credentials, cancellable);
+                } else {
+                    yield imap_session.initiate_session_async(account.imap_credentials, cancellable);
+                }
                 
                 // Connected and initiated, still need to be sure connection authorized
                 Imap.MailboxSpecifier current_mailbox;

@@ -56,6 +56,10 @@ public class AccountDialogAddEditPane : AccountDialogPane {
         return add_edit_page.get_mode();
     }
     
+    public Geary.ServiceProvider get_provider() {
+        return add_edit_page.get_service_provider();
+    }
+
     public void set_account_information(Geary.AccountInformation info,
         Geary.Engine.ValidationResult result = Geary.Engine.ValidationResult.OK) {
         add_edit_page.set_account_information(info, result);

@@ -19,12 +19,14 @@
  */
 
 public class Geary.Credentials : BaseObject, Gee.Hashable<Geary.Credentials> {
+    public bool is_token { get; set; }
     public string? user { get; set; }
     public string? pass { get; set; }
     
     public Credentials(string? user, string? pass) {
         this.user = user;
         this.pass = pass;
+        this.is_token = false;
     }
     
     public bool is_complete() {

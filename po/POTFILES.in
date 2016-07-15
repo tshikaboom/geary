@@ -5,6 +5,7 @@ desktop/geary-autostart.desktop.in
 src/client/accounts/account-dialog-account-list-pane.vala
 src/client/accounts/account-dialog-add-edit-pane.vala
 src/client/accounts/account-dialog-edit-alternate-emails-pane.vala
+src/client/accounts/account-dialog-oauth2-prompt.vala
 src/client/accounts/account-dialog-pane.vala
 src/client/accounts/account-dialog-remove-confirm-pane.vala
 src/client/accounts/account-dialog-remove-fail-pane.vala

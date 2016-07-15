@@ -9,7 +9,8 @@
  */
 public enum Geary.Service {
     IMAP,
-    SMTP;
+    SMTP,
+    XOAUTH2;
     
     /**
      * Returns a user-visible label for the {@link Service}.
@@ -22,6 +23,9 @@ public enum Geary.Service {
             case SMTP:
                 return _("SMTP");
             
+            case XOAUTH2:
+                return "XOAUTH2";
+
             default:
                 assert_not_reached();
         }
@@ -34,7 +38,8 @@ public enum Geary.Service {
 [Flags]
 public enum Geary.ServiceFlag {
     IMAP,
-    SMTP;
+    SMTP,
+    XOAUTH2;
     
     public bool has_imap() {
         return (this & IMAP) == IMAP;
@@ -42,6 +47,10 @@ public enum Geary.ServiceFlag {
     
     public bool has_smtp() {
         return (this & SMTP) == SMTP;
+    }
+
+    public bool has_xoauth2() {
+        return (this & XOAUTH2) == XOAUTH2;
     }
 }
 

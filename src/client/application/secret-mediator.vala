@@ -1,4 +1,4 @@
-/* Copyright 2016 Software Freedom Conservancy Inc.
+    /* Copyright 2016 Software Freedom Conservancy Inc.
  *
  * This software is licensed under the GNU Lesser General Public License
  * (version 2.1 or later).  See the COPYING file in this distribution.
@@ -18,6 +18,9 @@ public class SecretMediator : Geary.CredentialsMediator, Object {
             case Geary.Service.SMTP:
                 return "org.yorba.geary smtp_username:" + user;
             
+            case Geary.Service.XOAUTH2:
+                return "org.yorba.geary account_id:" + user;
+
             default:
                 assert_not_reached();
         }
@@ -30,6 +33,9 @@ public class SecretMediator : Geary.CredentialsMediator, Object {
 
             case Geary.Service.SMTP:
                 return account_information.smtp_credentials;
+
+            case Geary.Service.XOAUTH2:
+                return new Geary.Credentials(account_information.email, account_information.token);
 
             default:
                 assert_not_reached();

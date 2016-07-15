@@ -420,7 +420,7 @@ class ImapConsole : Gtk.Window {
     }
         
     private async void do_authenticate_async(string method, string secret) throws Error {
-        var cmd = new Geary.Imap.AuthenticateCommand(method, secret);
+        var cmd = new Geary.Imap.AuthenticateCommand(secret);
         cx.received_authentication_challenge.connect_after(send_empty_continuation_response);
         append_to_console ("[DEBUG] Starting async authentication\n");
         yield cx.authenticate_async(cmd);

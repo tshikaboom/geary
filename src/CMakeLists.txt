@@ -323,6 +323,7 @@ client/accounts/account-dialog.vala
 client/accounts/account-dialog-account-list-pane.vala
 client/accounts/account-dialog-add-edit-pane.vala
 client/accounts/account-dialog-edit-alternate-emails-pane.vala
+client/accounts/account-dialog-oauth2-prompt.vala
 client/accounts/account-dialog-pane.vala
 client/accounts/account-dialog-remove-confirm-pane.vala
 client/accounts/account-dialog-remove-fail-pane.vala
@@ -499,6 +500,7 @@ pkg_check_modules(DEPS REQUIRED
     gobject-introspection-1.0
     webkitgtk-3.0>=2.4.0
     enchant>=1.6
+    libsoup-2.4
     ${EXTRA_CLIENT_PKG_CONFIG}
 )
 

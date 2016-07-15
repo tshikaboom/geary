@@ -913,7 +913,7 @@ public class GearyController : Geary.BaseObject {
             }
             
             real_account_information.store_async.begin(cancellable);
-            do_update_stored_passwords_async.begin(Geary.ServiceFlag.IMAP | Geary.ServiceFlag.SMTP,
+            do_update_stored_passwords_async.begin(Geary.ServiceFlag.IMAP | Geary.ServiceFlag.SMTP | Geary.ServiceFlag.XOAUTH2,
                 real_account_information);
             
             debug("Successfully validated account information");
