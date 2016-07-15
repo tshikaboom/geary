@@ -5,14 +5,15 @@
  */
 
 using Soup;
+using Json;
 
 // Confirmation of the deletion of an account
 public class AccountDialogOauth2Prompt : Gtk.Box {
     private const string BASE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 
     private const string RESPONSE_TYPE = "response_type=code";
-    private const string CLIENT_ID = ""; // fill me
-    private const string CLIENT_SECRET = ""; // fill me
+    private const string CLIENT_ID = "534423065585-86ea1876ua43kneo8kp4p5tolr156v4g.apps.googleusercontent.com";
+    private const string CLIENT_SECRET = "pRKxHt8_Eg4R2P3V4wYjpzSn";
     private const string REDIRECT_URI = "http://127.0.0.1:6442";
     private const string SCOPE = "scope=https://mail.google.com/%20email%20profile";
     private const string STATE = "";
@@ -60,7 +61,7 @@ public class AccountDialogOauth2Prompt : Gtk.Box {
         string code = uri.get_query();
         code = code[5:code.length];
 
-        return "code=" + code + "&" + CLIENT_ID + "&" + CLIENT_SECRET + "&" + REDIRECT_URI + "grant_type=authorization_code";
+        return "code=" + code + "&client_id=" + CLIENT_ID + "&client_secret=" + CLIENT_SECRET + "&redirect_uri=" + REDIRECT_URI + "&" + "grant_type=authorization_code";
     }
 
     public string? get_token() {
@@ -74,19 +75,54 @@ public class AccountDialogOauth2Prompt : Gtk.Box {
 
     private WebKit.NavigationResponse on_redirect(WebKit.WebFrame frame, WebKit.NetworkRequest request) {
         string url = request.get_uri();
+
         stdout.printf("redirected to %s\n", url);
         if (url.contains(REDIRECT_URI + "/")) {
+            string method = "POST";
+            string uri = "https://www.googleapis.com/oauth2/v4/token";
             stdout.printf("We're in!\n");
             prompt_accepted();
             stdout.printf("code %s\n", construct_continue(url));
-            Soup.Session session = new Soup.Session();
-            Soup.Message message = new Soup.Message("POST /oauth2/v4/token HTTP/1.1", "www.googleapis.com");
-            message.got_body.connect(on_got_body);
-            message.set_request("application/x-www-form-urlencoded", Soup.MemoryUse.TEMPORARY, construct_continue(url).data);
+            var session = new Soup.Session();
+            var message = new Soup.Message(method, uri);
+            session.ssl_use_system_ca_file = true;
+            stdout.printf("session after %p\nmessage after %p\n", ref session, ref message);
+            message.set_request("application/x-www-form-urlencoded", Soup.MemoryUse.COPY, Geary.String.string_to_uchar_array(construct_continue(url)));
+            uint status = session.send_message(message);
+            stdout.printf("return status %u\n", status);
+            var parser = new Json.Parser();
+            try {
+                parser.load_from_data((string) message.response_body.flatten().data, -1);
+            } catch (Error e) {
 
-            session.send_message(message);
+            }
+            var node = parser.get_root();
 
+            foreach (unowned string key in node.get_object().get_members()) {
+                switch(key) {
+                    case "access_token":
+                        stdout.printf("access_token %s\n", node.get_object().get_string_member("access_token"));
+                        token_added(node.get_object().get_string_member("access_token"));
+                    break;
+                    case "id_token":
+                        stdout.printf("id_token %s\n", node.get_object().get_string_member("id_token"));
+                    break;
+                    case "refresh_token":
+                        stdout.printf("id_token %s\n", node.get_object().get_string_member("refresh_token"));
+                    break;
+                    case "expires_in":
+                        stdout.printf("id_token %s\n", node.get_object().get_string_member("expires_in"));
+                    break;
+                    case "token_type":
+                        stdout.printf("id_token %s\n", node.get_object().get_string_member("token_type"));
+                    break;
+                }
+            }
 
+            stdout.printf("%s\n ", (string) message.response_body.data);
+//            GLib.BufferedInputStream is = new GLib.BufferedInputStream(session.send_message(message));
+
+            on_got_body(message);
             return WebKit.NavigationResponse.IGNORE;
         }
 
@@ -98,8 +134,7 @@ public class AccountDialogOauth2Prompt : Gtk.Box {
     private void on_got_body(Soup.Message message) {
         stdout.printf("Testing for headers\n");
         if (message.response_headers.get_headers_type() == Soup.MessageHeadersType.RESPONSE) {
-            stdout.printf("Normally it should be good?\n");
-            stdout.printf("%s\n", (string) message.response_body.data);
+
         }
     }
 }

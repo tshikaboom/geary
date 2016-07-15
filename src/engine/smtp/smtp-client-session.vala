@@ -71,6 +71,9 @@ public class Geary.Smtp.ClientSession {
             
             if (cx.capabilities.has_setting(Capabilities.AUTH, Capabilities.AUTH_LOGIN))
                 auth_order.add(Capabilities.AUTH_LOGIN);
+
+            if (cx.capabilities.has_setting(Capabilities.AUTH, Capabilities.AUTH_XOAUTH2))
+                auth_order.add(Capabilities.AUTH_XOAUTH2);
         }
         
         // fallback on commonly-implemented styles, again in our order of preference
@@ -80,6 +83,9 @@ public class Geary.Smtp.ClientSession {
         if (!auth_order.contains(Capabilities.AUTH_LOGIN))
             auth_order.add(Capabilities.AUTH_LOGIN);
         
+        if (!auth_order.contains(Capabilities.AUTH_XOAUTH2))
+            auth_order.add(Capabilities.AUTH_XOAUTH2);
+
         // in current situation, should always have one authentication type to attempt
         assert(auth_order.size > 0);
         
@@ -95,6 +101,10 @@ public class Geary.Smtp.ClientSession {
                     authenticator = new LoginAuthenticator(creds);
                 break;
                 
+                case Capabilities.AUTH_XOAUTH2:
+                    authenticator = new XOAuth2Authenticator(creds);
+                break;
+
                 default:
                     assert_not_reached();
             }

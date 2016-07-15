@@ -410,24 +410,27 @@ class ImapConsole : Gtk.Window {
         check_connected (cmd, args, 2, "method secret");
 
         status("Authenticating...");
-        do_authenticate_async.begin(args[0], args[1], on_authenticated);
+        cx.send_async.begin(new Geary.Imap.AuthenticateCommand.with_b64(args[1]), null, on_authenticated);
+//        do_authenticate_async.begin(args[0], args[1], on_authenticated);
     }
-
+/*
     private string send_empty_continuation_response(Geary.Imap.ContinuationResponse challenge)
     {
         append_to_console ("[Debug] Sending authentication response");
         return "+\r\n";
-    }
-        
+    }*/
+        /*
     private async void do_authenticate_async(string method, string secret) throws Error {
-        var cmd = new Geary.Imap.AuthenticateCommand(secret);
+        var credentials = new Geary.Credentials(method, secret);
+        credentials.is_token = true;
+        var cmd = new Geary.Imap.AuthenticateCommand(credentials);
         cx.received_authentication_challenge.connect_after(send_empty_continuation_response);
         append_to_console ("[DEBUG] Starting async authentication\n");
         yield cx.authenticate_async(cmd);
         append_to_console ("[DEBUG] Waiting for response...\n");
         yield wait_for_response_async(cmd.tag);
     }
-    
+    */
     private void on_authenticated(Object? source, AsyncResult result) {
         try {
             cx.authenticate_async.end(result);

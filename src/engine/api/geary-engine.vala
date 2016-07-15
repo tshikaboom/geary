@@ -277,11 +277,14 @@ public class Geary.Engine : BaseObject {
             debug("Error connecting to IMAP server: %s", err.message);
             error_code |= ValidationResult.IMAP_CONNECTION_FAILED;
         }
-        
+        /// revisit here
         if (!error_code.is_all_set(ValidationResult.IMAP_CONNECTION_FAILED)) {
             try {
                 if (account.needs_token) {
-                    yield imap_session.initiate_session_async(account.token_credentials, cancellable);
+                    stdout.printf("Creating credentials %s %s\n", account.email, account.token);
+                    Geary.Credentials credentials = new Geary.Credentials(account.email, account.token);
+                    credentials.is_token = true;
+                    yield imap_session.initiate_session_async(credentials, cancellable);
                 } else {
                     yield imap_session.initiate_session_async(account.imap_credentials, cancellable);
                 }
@@ -310,7 +313,15 @@ public class Geary.Engine : BaseObject {
         // SMTP is simpler, merely see if login works and done (throws an SmtpError if not)
         Geary.Smtp.ClientSession? smtp_session = new Geary.Smtp.ClientSession(account.get_smtp_endpoint());
         try {
-            yield smtp_session.login_async(account.smtp_credentials, cancellable);
+            if (account.needs_token) {
+                Geary.Credentials credentials = new Geary.Credentials(account.email, account.token);
+                credentials.is_token = true;
+                yield smtp_session.login_async(credentials, cancellable);
+            } else {
+                yield smtp_session.login_async(account.smtp_credentials, cancellable);
+            }
+
+
         } catch (Error err) {
             debug("Error validating SMTP account info: %s", err.message);
             if (err is SmtpError.AUTHENTICATION_FAILED)

@@ -279,6 +279,7 @@ engine/smtp/smtp-data-format.vala
 engine/smtp/smtp-error.vala
 engine/smtp/smtp-greeting.vala
 engine/smtp/smtp-login-authenticator.vala
+engine/smtp/smtp-xoauth2-authenticator.vala
 engine/smtp/smtp-plain-authenticator.vala
 engine/smtp/smtp-request.vala
 engine/smtp/smtp-response.vala
@@ -500,18 +501,19 @@ pkg_check_modules(DEPS REQUIRED
     gobject-introspection-1.0
     webkitgtk-3.0>=2.4.0
     enchant>=1.6
+    json-glib-1.0
     libsoup-2.4
     ${EXTRA_CLIENT_PKG_CONFIG}
 )
 
 set(ENGINE_PACKAGES
-    glib-2.0 gee-0.8 gio-2.0 gmime-2.6 posix sqlite3 libxml-2.0
+    glib-2.0 gee-0.8 gio-2.0 gmime-2.6 posix sqlite3 libxml-2.0 json-glib-1.0
 )
 
 # webkitgtk-3.0 is listed as a custom VAPI (below) to ensure it's treated as a dependency and
 # built before compilation
 set(CLIENT_PACKAGES
-    gtk+-3.0 libsecret-1 libsoup-2.4 libnotify libcanberra gcr-3 enchant ${EXTRA_CLIENT_PACKAGES}
+    gtk+-3.0 libsecret-1 libsoup-2.4 libnotify libcanberra gcr-3 enchant json-glib-1.0 ${EXTRA_CLIENT_PACKAGES}
 )
 
 set(CONSOLE_PACKAGES
@@ -532,7 +534,7 @@ set(CFLAGS
     -DISO_CODE_639_XML=\"${ISO_CODE_639_XML}\"
     -DISO_CODE_3166_XML=\"${ISO_CODE_3166_XML}\"
     -DGCR_API_SUBJECT_TO_CHANGE
-    -g
+    -g -I/usr/include/json-glib-1.0
 )
 
 if (NOT DEBUG)
@@ -606,7 +608,7 @@ add_custom_command(
     WORKING_DIRECTORY
         ${CMAKE_SOURCE_DIR}/bindings/metadata
     COMMAND
-        vapigen --pkg=gio-2.0 --pkg=gtk+-3.0 --pkg=libsoup-2.4 --metadatadir=. --metadatadir=${WEBKITGTK_METADATA_DIR} --library=webkitgtk-3.0 --directory=${CMAKE_BINARY_DIR}/src ${WEBKITGTK_CUSTOM_VALA} `${PKG_CONFIG_EXECUTABLE} --variable=girdir gobject-introspection-1.0`/WebKit-3.0.gir
+        vapigen --pkg=gio-2.0 --pkg=gtk+-3.0 --pkg=libsoup-2.4 --pkg=json-glib-1.0 --metadatadir=. --metadatadir=${WEBKITGTK_METADATA_DIR} --library=webkitgtk-3.0 --directory=${CMAKE_BINARY_DIR}/src ${WEBKITGTK_CUSTOM_VALA} `${PKG_CONFIG_EXECUTABLE} --variable=girdir gobject-introspection-1.0`/WebKit-3.0.gir
 )
 
 # Geary client app
@@ -629,7 +631,7 @@ OPTIONS
 )
 
 add_executable(geary ${GEARY_VALA_C} ${RESOURCES_C})
-target_link_libraries(geary m ${DEPS_LIBRARIES} gthread-2.0 geary-static)
+target_link_libraries(geary m ${DEPS_LIBRARIES} json-glib-1.0 gthread-2.0 geary-static)
 install(TARGETS geary RUNTIME DESTINATION bin)
 add_custom_command(
     TARGET

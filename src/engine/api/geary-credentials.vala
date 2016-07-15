@@ -48,6 +48,14 @@ public class Geary.Credentials : BaseObject, Gee.Hashable<Geary.Credentials> {
         return user == c.user && pass == c.pass;
     }
     
+    public string get_gmail_style_string() {
+        return "user=" + user + ((char)0x1).to_string() + "auth=Bearer " + pass + ((char)0x1).to_string() +((char)0x1).to_string();
+    }
+
+    public string get_gmail_style() {
+        return GLib.Base64.encode(Geary.String.string_to_uchar_array(get_gmail_style_string()));
+    }
+
     public uint hash() {
         return "%s%s".printf(user ?? "", pass ?? "").hash();
     }

@@ -210,6 +210,7 @@ public class AddEditPage : Gtk.Box {
     private bool edited_imap_port = false;
     private bool edited_smtp_port = false;
     private bool has_token = false;
+    private string? token = null;
     
     private Geary.Engine.ValidationResult last_validation_result = Geary.Engine.ValidationResult.OK;
     
@@ -359,6 +360,7 @@ public class AddEditPage : Gtk.Box {
 
         oauth2prompt = new AccountDialogOauth2Prompt();
         oauth2prompt.prompt_accepted.connect(() => { has_token = true; update_ui(); });
+        oauth2prompt.token_added.connect(on_token_added);
         pack_end(oauth2prompt, true, true, 0);
     }
     
@@ -367,6 +369,7 @@ public class AddEditPage : Gtk.Box {
         set_all_info(info.real_name,
             info.nickname,
             info.email,
+            info.token,
             info.imap_credentials.user,
             info.imap_credentials.pass,
             info.imap_remember_password && info.smtp_remember_password,
@@ -397,6 +400,7 @@ public class AddEditPage : Gtk.Box {
         string? initial_real_name = null,
         string? initial_nickname = null,
         string? initial_email = null,
+        string? token = null,
         string? initial_imap_username = null,
         string? initial_imap_password = null,
         bool initial_remember_password = true,
@@ -595,6 +599,12 @@ public class AddEditPage : Gtk.Box {
         }
     }
     
+    private void on_token_added(string token) {
+        this.has_token = true;
+        this.token = token;
+        on_changed();
+    }
+
     private void on_signature_stack_changed() {
         if (signature_stack.visible_child_name == "preview_window")
             preview_webview.load_html_string(Util.DOM.smart_escape(email_signature, true), "");
@@ -635,7 +645,8 @@ public class AddEditPage : Gtk.Box {
             // We only ever need the email address with Gmail.
             case Geary.ServiceProvider.GMAIL:
                 if (Geary.String.is_empty_or_whitespace(nickname) ||
-                    Geary.String.is_empty_or_whitespace(email_address))
+                    Geary.String.is_empty_or_whitespace(email_address) ||
+                    !has_token)
                     return false;
             break;
 
@@ -675,6 +686,7 @@ public class AddEditPage : Gtk.Box {
             return null;
         }
         
+        account_information.email = email_address;
         account_information.real_name = real_name.strip();
         account_information.nickname = nickname.strip();
         account_information.imap_credentials = imap_credentials;
@@ -698,6 +710,11 @@ public class AddEditPage : Gtk.Box {
         account_information.use_email_signature = use_email_signature;
         account_information.email_signature = email_signature;
         
+        if (has_token) {
+            account_information.needs_token = true;
+            account_information.token = token;
+        }
+
         if (smtp_noauth)
             account_information.smtp_credentials = null;
         
@@ -744,7 +761,7 @@ public class AddEditPage : Gtk.Box {
                 other_info.hide();
                 oauth2prompt.hide();
             }
-            else {
+            else { // Gmail
                 label_password.hide();
                 entry_password.hide();
                 other_info.hide();

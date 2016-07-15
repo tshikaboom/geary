@@ -13,12 +13,20 @@
 public class Geary.Imap.AuthenticateCommand : Command {
     public const string NAME = "authenticate";
     
-    public AuthenticateCommand(string data) {
-        base (NAME, {"XOAUTH2", data});
-     }
+    public AuthenticateCommand(Geary.Credentials credentials) {
+        string oauth2_b64_string = credentials.get_gmail_style();
+        base (NAME, {"XOAUTH2", oauth2_b64_string});
+        stdout.printf("Feeding %s %s\n", credentials.user, credentials.pass);
+        stdout.printf("%s\n", credentials.get_gmail_style_string());
+        stdout.printf("base64 %s\n", credentials.get_gmail_style());
+    }
+
+    public AuthenticateCommand.with_b64(string b64_encoded_string) {
+        base (NAME, {"XOAUTH2", b64_encoded_string});
+    }
 
     public override string to_string() {
-        return "%s %s %s <client secret>".printf(tag.to_string(), name, args[0]);
+        return "%s %s %s %s".printf(tag.to_string(), name, args[0], args[1]);
     }
 }
 

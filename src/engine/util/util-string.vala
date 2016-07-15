@@ -80,5 +80,13 @@ public string safe_byte_substring(string s, ssize_t max_length) {
     return glib_substring(s, 0, s.char_count(max_length));
 }
 
+public uchar[] string_to_uchar_array(string str) {
+    uchar[] data = new uchar[0];
+    for (int ctr = 0; ctr < str.length; ctr++)
+        data += (uchar) str[ctr];
+
+    return data;
+}
+
 }
 

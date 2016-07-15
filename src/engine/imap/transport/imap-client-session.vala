@@ -680,15 +680,16 @@ public class Geary.Imap.ClientSession : BaseObject {
      */
     public async StatusResponse login_async(Geary.Credentials credentials, Cancellable? cancellable = null)
         throws Error {
-        if (!credentials.is_complete() && !credentials.is_token) {
+        if (credentials.is_complete() || !credentials.is_token) {/*
             login_failed();
-            throw new ImapError.UNAUTHENTICATED("No credentials provided for account: %s", credentials.to_string());
+            throw new ImapError.UNAUTHENTICATED("No credentials provided for account: %s", credentials.to_string());*/
+            stdout.printf("Commented out code\n");
         }
-        
+
         Command cmd;
         if ((capabilities.has_setting("AUTH", "XOAUTH2")) && (credentials.is_token)) {
-            cmd = new AuthenticateCommand(credentials.pass);
-            stdout.printf("YEAH!\n");
+            cmd = new AuthenticateCommand(credentials);
+            stdout.printf("YEAH! %s %s\n", credentials.user, credentials.pass);
         }
         else {
             cmd = new LoginCommand(credentials.user, credentials.pass);
@@ -792,7 +793,7 @@ public class Geary.Imap.ClientSession : BaseObject {
     private uint on_login(uint state, uint event, void *user, Object? object) {
         MachineParams params = (MachineParams) object;
         
-        assert(params.cmd is LoginCommand);
+        //assert(params.cmd is LoginCommand);
         if (!reserve_state_change_cmd(params, state, event))
             return state;
         
