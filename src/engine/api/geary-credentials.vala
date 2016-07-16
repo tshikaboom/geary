@@ -29,6 +29,11 @@ public class Geary.Credentials : BaseObject, Gee.Hashable<Geary.Credentials> {
         this.is_token = false;
     }
     
+    public Credentials.token(string? user, string? pass) {
+        this(user, pass);
+        this.is_token = true;
+    }
+
     public bool is_complete() {
         return (user != null) && (pass != null);
     }

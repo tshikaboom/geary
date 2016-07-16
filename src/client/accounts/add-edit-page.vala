@@ -369,7 +369,8 @@ public class AddEditPage : Gtk.Box {
         set_all_info(info.real_name,
             info.nickname,
             info.email,
-            info.token,
+            info.token_credentials.user,
+            info.token_credentials.pass,
             info.imap_credentials.user,
             info.imap_credentials.pass,
             info.imap_remember_password && info.smtp_remember_password,
@@ -400,7 +401,8 @@ public class AddEditPage : Gtk.Box {
         string? initial_real_name = null,
         string? initial_nickname = null,
         string? initial_email = null,
-        string? token = null,
+        string? token_user = null,
+        string? token_pass = null,
         string? initial_imap_username = null,
         string? initial_imap_password = null,
         bool initial_remember_password = true,
@@ -710,9 +712,8 @@ public class AddEditPage : Gtk.Box {
         account_information.use_email_signature = use_email_signature;
         account_information.email_signature = email_signature;
         
-        if (has_token) {
-            account_information.needs_token = true;
-            account_information.token = token;
+        if (has_token && email_address != null) {
+            account_information.token_credentials = new Geary.Credentials.token(email_address, token);
         }
 
         if (smtp_noauth)

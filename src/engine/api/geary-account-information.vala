@@ -39,6 +39,7 @@ public class Geary.AccountInformation : BaseObject {
     private const string USE_EMAIL_SIGNATURE_KEY = "use_email_signature";
     private const string EMAIL_SIGNATURE_KEY = "email_signature";
     
+    private bool needs_token = false;
     //
     // "Retired" keys
     //
@@ -143,12 +144,10 @@ public class Geary.AccountInformation : BaseObject {
     public bool imap_remember_password { get; set; default = true; }
     public Geary.Credentials? smtp_credentials { get; set; default = new Geary.Credentials(null, null); }
     public bool smtp_remember_password { get; set; default = true; }
-    public string? token { get; set; default = null; }
-    public Geary.Credentials token_credentials { get ; set; }
-    public bool needs_token { get; set; default = false; }
-    
+    public Geary.Credentials? token_credentials {get; set; default = null; }
+
     public bool save_drafts { get; set; default = true; }
-    
+
     private bool _save_sent_mail = true;
     private Endpoint? imap_endpoint = null;
     private Endpoint? smtp_endpoint = null;
@@ -474,7 +473,7 @@ public class Geary.AccountInformation : BaseObject {
         if (services.has_smtp() && smtp_credentials != null && !smtp_credentials.is_complete())
             get_services |= ServiceFlag.SMTP;
         
-        if (services.has_xoauth2() && this.needs_token && token == null) {
+        if (services.has_xoauth2() && this.needs_token && token_credentials == null) {
             get_services |= ServiceFlag.XOAUTH2;
         }
 
@@ -487,6 +486,11 @@ public class Geary.AccountInformation : BaseObject {
         if (unset_services == 0)
             return true;
         
+        if ((unset_services & ServiceFlag.XOAUTH2) != 0) {
+            stdout.printf("Okay, nohjah, we're here\n");
+            return true;
+        }
+
         return yield prompt_passwords_async(unset_services);
     }
     
@@ -507,10 +511,6 @@ public class Geary.AccountInformation : BaseObject {
         smtp_credentials = new Credentials(smtp_credentials.user, smtp_password);
     }
     
-    private void set_oauth2_token(string token) {
-        this.token = token;
-    }
-
     /**
      * Use Engine's authentication mediator to retrieve the passwords for the
      * given services.  The passwords will be stored in the appropriate
@@ -547,9 +547,7 @@ public class Geary.AccountInformation : BaseObject {
             string? new_token = yield mediator.get_password_async(Service.XOAUTH2, this);
 
             if (new_token != null) {
-                set_oauth2_token(new_token);
-                token_credentials = new Geary.Credentials(email, token);
-                token_credentials.is_token = true;
+                token_credentials = new Geary.Credentials.token(email, new_token);
             }
             else
                 failed_services |= ServiceFlag.XOAUTH2;
@@ -618,7 +616,7 @@ public class Geary.AccountInformation : BaseObject {
                 yield mediator.clear_password_async(Service.SMTP, this);
         }
 
-        if (services.has_xoauth2() && token != null) {
+        if (services.has_xoauth2() && token_credentials != null) {
             yield mediator.set_password_async(Service.XOAUTH2, this);
         }
     }
@@ -926,7 +924,7 @@ public class Geary.AccountInformation : BaseObject {
         }
         
         try {
-            if (services.has_xoauth2() && token != null)
+            if (services.has_xoauth2() && token_credentials != null)
                 yield mediator.clear_password_async(Service.XOAUTH2, this);
         } catch (Error e) {
             return_error = e;

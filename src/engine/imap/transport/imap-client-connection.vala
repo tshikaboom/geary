@@ -519,7 +519,7 @@ public class Geary.Imap.ClientConnection : BaseObject {
     
     private void on_parameters_ready(RootParameters root) {
         ServerResponse response;
-        debug("Yo! Got some parameters fresh off the block:");
+//        debug("Yo! Got some parameters fresh off the block:");
         debug(root.to_string());
         try {
             response = ServerResponse.migrate_from_server(root);
@@ -531,7 +531,7 @@ public class Geary.Imap.ClientConnection : BaseObject {
         
         StatusResponse? status_response = response as StatusResponse;
         if (status_response != null) {
-            debug("It's a StatusResponse, yo");
+//            debug("It's a StatusResponse, yo");
             fsm.issue(Event.RECVD_STATUS_RESPONSE, null, status_response);
             
             return;
@@ -539,7 +539,7 @@ public class Geary.Imap.ClientConnection : BaseObject {
         
         ServerData? server_data = response as ServerData;
         if (server_data != null) {
-            debug("It's just server data");
+//            debug("It's just server data");
             fsm.issue(Event.RECVD_SERVER_DATA, null, server_data);
             
             return;
@@ -547,7 +547,7 @@ public class Geary.Imap.ClientConnection : BaseObject {
         
         ContinuationResponse? continuation_response = response as ContinuationResponse;
         if (continuation_response != null) {
-                        debug("Continuatron!");
+//                        debug("Continuatron!");
             fsm.issue(Event.RECVD_CONTINUATION_RESPONSE, null, continuation_response);
             
             return;

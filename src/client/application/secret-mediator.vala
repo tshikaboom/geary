@@ -35,7 +35,7 @@ public class SecretMediator : Geary.CredentialsMediator, Object {
                 return account_information.smtp_credentials;
 
             case Geary.Service.XOAUTH2:
-                return new Geary.Credentials(account_information.email, account_information.token);
+                return account_information.token_credentials;
 
             default:
                 assert_not_reached();
