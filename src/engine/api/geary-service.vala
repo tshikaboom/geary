@@ -24,7 +24,7 @@ public enum Geary.Service {
                 return _("SMTP");
             
             case XOAUTH2:
-                return "XOAUTH2";
+                return _("XOAUTH2");
 
             default:
                 assert_not_reached();

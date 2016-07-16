@@ -680,19 +680,24 @@ public class Geary.Imap.ClientSession : BaseObject {
      */
     public async StatusResponse login_async(Geary.Credentials credentials, Cancellable? cancellable = null)
         throws Error {
-        if (!credentials.is_complete()) {
-            if (!credentials.is_token) {
+        stdout.printf("logging in with credentials %s", credentials.get_gmail_style_string());
+        stdout.printf("token: %s\n", credentials.is_token ? "yes" : "no");
+        if (!credentials.is_token) {
+            if (!credentials.is_complete()) {
                 login_failed();
                 throw new ImapError.UNAUTHENTICATED("No credentials provided for account: %s", credentials.to_string());
             }
+        } else {
+            stdout.printf("else case! %s %s\n", credentials.user, credentials.pass);
         }
 
         Command cmd;
-        if ((capabilities.has_setting("AUTH", "XOAUTH2")) && (credentials.is_token)) {
+        if ((capabilities.has_setting(Capabilities.AUTH, Capabilities.AUTH_XOAUTH2)) && (credentials.is_token)) {
             cmd = new AuthenticateCommand(credentials);
             stdout.printf("YEAH! %s %s\n", credentials.user, credentials.pass);
         }
         else {
+            stdout.printf ("capabilities %s\n", capabilities.to_string());
             cmd = new LoginCommand(credentials.user, credentials.pass);
         }
         MachineParams params = new MachineParams(cmd);

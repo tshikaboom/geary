@@ -27,10 +27,12 @@ public class Geary.Credentials : BaseObject, Gee.Hashable<Geary.Credentials> {
         this.user = user;
         this.pass = pass;
         this.is_token = false;
+        stdout.printf("Constructing %s\n", get_gmail_style_string());
     }
     
     public Credentials.token(string? user, string? pass) {
-        this(user, pass);
+        this.user = user;
+        this.pass = pass;
         this.is_token = true;
     }
 
@@ -58,6 +60,7 @@ public class Geary.Credentials : BaseObject, Gee.Hashable<Geary.Credentials> {
     }
 
     public string get_gmail_style() {
+        stdout.printf("getting %s\n", get_gmail_style_string());
         return GLib.Base64.encode(Geary.String.string_to_uchar_array(get_gmail_style_string()));
     }
 

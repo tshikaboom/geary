@@ -77,7 +77,10 @@ public class Geary.Imap.ClientSessionManager : BaseObject {
         endpoint = account_information.get_imap_endpoint();
         network_monitor = NetworkMonitor.get_default();
         
-        account_information.notify["imap-credentials"].connect(on_imap_credentials_notified);
+        if (account_information.token_credentials == null)
+            account_information.notify["imap-credentials"].connect(on_imap_credentials_notified);
+        else
+            account_information.notify["token_credentials"].connect(on_token_credentials_notified);
         endpoint.untrusted_host.connect(on_imap_untrusted_host);
         endpoint.notify[Endpoint.PROP_TRUST_UNTRUSTED_HOST].connect(on_imap_trust_untrusted_host);
         
@@ -148,6 +151,13 @@ public class Geary.Imap.ClientSessionManager : BaseObject {
             adjust_session_pool.begin();
     }
     
+    private void on_token_credentials_notified() {
+        authentication_failed = false;
+
+        if (is_open)
+            adjust_session_pool.begin();
+    }
+
     private void check_open() throws Error {
         if (!is_open)
             throw new EngineError.OPEN_REQUIRED("ClientSessionManager is not open");
@@ -247,7 +257,11 @@ public class Geary.Imap.ClientSessionManager : BaseObject {
         }
         
         try {
-            yield new_session.initiate_session_async(account_information.imap_credentials, cancellable);
+            if (account_information.service_provider == Geary.ServiceProvider.GMAIL) {
+                yield new_session.initiate_session_async(account_information.token_credentials, cancellable);
+            } else {
+                yield new_session.initiate_session_async(account_information.imap_credentials, cancellable);
+            }
         } catch (Error err) {
             debug("[%s] Initiate session failure: %s", new_session.to_string(), err.message);
             

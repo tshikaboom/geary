@@ -39,7 +39,6 @@ public class Geary.AccountInformation : BaseObject {
     private const string USE_EMAIL_SIGNATURE_KEY = "use_email_signature";
     private const string EMAIL_SIGNATURE_KEY = "email_signature";
     
-    private bool needs_token = false;
     //
     // "Retired" keys
     //
@@ -174,6 +173,7 @@ public class Geary.AccountInformation : BaseObject {
         this.config_dir = config_directory;
         this.data_dir = data_directory;
         this.file = config_dir.get_child(SETTINGS_FILENAME);
+        this.token_credentials = null;
 
         KeyFile key_file = new KeyFile();
         try {
@@ -216,7 +216,7 @@ public class Geary.AccountInformation : BaseObject {
                 default_ordinal = ordinal + 1;
             
             if (service_provider == ServiceProvider.GMAIL)
-                needs_token = true;
+                stdout.printf("We're parsing some gmail!\n");
 
             if (service_provider == ServiceProvider.OTHER) {
                 default_imap_server_host = get_string_value(key_file, GROUP, IMAP_HOST);
@@ -296,6 +296,7 @@ public class Geary.AccountInformation : BaseObject {
         prefetch_period_days = from.prefetch_period_days;
         save_sent_mail = from.save_sent_mail;
         ordinal = from.ordinal;
+        token_credentials = from.token_credentials;
         default_imap_server_host = from.default_imap_server_host;
         default_imap_server_port = from.default_imap_server_port;
         default_imap_server_ssl = from.default_imap_server_ssl;
@@ -467,13 +468,14 @@ public class Geary.AccountInformation : BaseObject {
         // Only call get_passwords on anything that hasn't been set
         // (incorrectly) previously.
         ServiceFlag get_services = 0;
-        if (services.has_imap() && !imap_credentials.is_complete())
+        if (services.has_imap() && (!imap_credentials.is_complete() && token_credentials == null))
             get_services |= ServiceFlag.IMAP;
         
         if (services.has_smtp() && smtp_credentials != null && !smtp_credentials.is_complete())
             get_services |= ServiceFlag.SMTP;
         
-        if (services.has_xoauth2() && this.needs_token && token_credentials == null) {
+        if (services.has_xoauth2() && this.service_provider == Geary.ServiceProvider.GMAIL && token_credentials == null) {
+            stdout.printf("We're in the good case!\n");
             get_services |= ServiceFlag.XOAUTH2;
         }
 
@@ -486,10 +488,11 @@ public class Geary.AccountInformation : BaseObject {
         if (unset_services == 0)
             return true;
         
-        if ((unset_services & ServiceFlag.XOAUTH2) != 0) {
+        if (unset_services.has_xoauth2()) {
             stdout.printf("Okay, nohjah, we're here\n");
             return true;
         }
+        else stdout.printf("Hm? provider gmail?\n");
 
         return yield prompt_passwords_async(unset_services);
     }
@@ -545,9 +548,10 @@ public class Geary.AccountInformation : BaseObject {
         
         if (services.has_xoauth2()) {
             string? new_token = yield mediator.get_password_async(Service.XOAUTH2, this);
-
             if (new_token != null) {
                 token_credentials = new Geary.Credentials.token(email, new_token);
+                stdout.printf("Done in accountinformation %s\n", token_credentials.get_gmail_style_string());
+                stdout.printf("token: %s\n", token_credentials.is_token ? "yes" : "no");
             }
             else
                 failed_services |= ServiceFlag.XOAUTH2;
@@ -737,6 +741,9 @@ public class Geary.AccountInformation : BaseObject {
             case Service.SMTP:
                 return get_smtp_endpoint();
             
+            case Service.XOAUTH2:
+                return get_imap_endpoint();
+
             default:
                 assert_not_reached();
         }

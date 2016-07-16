@@ -66,7 +66,19 @@ public class SecretMediator : Geary.CredentialsMediator, Object {
         // fallback to the old keyring key string for upgrading users
         if (password == null) {
             Geary.Credentials creds = get_credentials(service, account_information);
-            
+            stdout.printf("Getting almost xoauth2\n");
+            switch (service) {
+                case Geary.Service.XOAUTH2:
+                    stdout.printf("that's not bad actually. secretly");
+                    stdout.printf("Got %s %s from store\n", creds.user, creds.pass);
+                    creds.is_token = true;
+                break;
+                default:
+                    stdout.printf("service %s\n", service.user_label());
+                break;
+            }
+
+
             // <= 0.6
             password = yield migrate_old_password(get_key_name(service, creds.user),
                 key_name, cancellable);

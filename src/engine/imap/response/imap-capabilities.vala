@@ -12,6 +12,8 @@ public class Geary.Imap.Capabilities : Geary.GenericCapabilities {
     public const string DEFLATE_SETTING = "DEFLATE";
     public const string UIDPLUS = "UIDPLUS";
     public const string SPECIAL_USE = "SPECIAL-USE";
+    public const string AUTH = "AUTH";
+    public const string AUTH_XOAUTH2 = "xoauth2";
     
     public const string NAME_SEPARATOR = "=";
     public const string? VALUE_SEPARATOR = null;

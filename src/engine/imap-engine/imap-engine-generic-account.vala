@@ -161,9 +161,15 @@ private abstract class Geary.ImapEngine.GenericAccount : Geary.Account {
         // To prevent spurious connection failures, we make sure we have the
         // IMAP password before attempting a connection.  This might have to be
         // reworked when we allow passwordless logins.
-        if (!information.imap_credentials.is_complete())
-            yield information.fetch_passwords_async(ServiceFlag.IMAP);
-        
+        if (information.service_provider != Geary.ServiceProvider.GMAIL) {
+            if (!information.imap_credentials.is_complete()) {
+                stdout.printf("imapgeneric, credentials; we're not supposed to be here\n");
+                yield information.fetch_passwords_async(ServiceFlag.IMAP);
+            }
+        } else {
+            stdout.printf("Getting token for gmail\n");
+            yield information.fetch_passwords_async(ServiceFlag.XOAUTH2);
+        }
         // need to back out local.open_async() if remote fails
         try {
             yield remote.open_async(cancellable);
