@@ -768,7 +768,7 @@ public class AddEditPage : Gtk.Box {
                 other_info.hide();
                 check_remember_password.hide();
                 if (!has_token)
-                    oauth2prompt.visible = mode == PageMode.WELCOME;
+                    oauth2prompt.visible = ((mode == PageMode.WELCOME) || (mode == PageMode.ADD));
                 else
                     oauth2prompt.hide();
             }
