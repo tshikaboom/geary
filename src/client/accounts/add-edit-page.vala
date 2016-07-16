@@ -647,9 +647,9 @@ public class AddEditPage : Gtk.Box {
             // We only ever need the email address with Gmail.
             case Geary.ServiceProvider.GMAIL:
                 if (Geary.String.is_empty_or_whitespace(nickname) ||
-                    Geary.String.is_empty_or_whitespace(email_address) ||
-                    !has_token)
-                    return false;
+                    Geary.String.is_empty_or_whitespace(email_address))
+                        if (mode == PageMode.WELCOME)
+                            return false;
             break;
 
             // YAHOO and OUTLOOK
@@ -768,7 +768,7 @@ public class AddEditPage : Gtk.Box {
                 other_info.hide();
                 check_remember_password.hide();
                 if (!has_token)
-                    oauth2prompt.show();
+                    oauth2prompt.visible = mode == PageMode.WELCOME;
                 else
                     oauth2prompt.hide();
             }
