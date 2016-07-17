@@ -156,12 +156,12 @@ public class AccountDialog : Gtk.Dialog {
     private void on_save_add_or_edit(Geary.AccountInformation info) {
         // Show the busy spinner.
         spinner_pane.present();
-        
+
         // determine if editing an existing Account or adding a new one
         Geary.Engine.ValidationOption options = (add_edit_pane.get_mode() == AddEditPage.PageMode.EDIT)
             ? Geary.Engine.ValidationOption.UPDATING_EXISTING
             : Geary.Engine.ValidationOption.NONE;
-        
+
         // For account edits, we only need to validate the connection if the credentials have changed.
         bool validate_connection = true;
         if (add_edit_pane.get_mode() == AddEditPage.PageMode.EDIT && info.is_copy()) {
@@ -172,14 +172,14 @@ public class AccountDialog : Gtk.Dialog {
                     (info.smtp_credentials != null && !real_info.smtp_credentials.equal_to(info.smtp_credentials));
             }
         }
-        
+
         if (validate_connection)
             options |= Geary.Engine.ValidationOption.CHECK_CONNECTIONS;
-        
+
         // Validate account.
         do_save_or_edit_async.begin(info, options);
     }
-    
+
     private async void do_save_or_edit_async(Geary.AccountInformation account_information,
         Geary.Engine.ValidationOption options) {
         Geary.Engine.ValidationResult validation_result = Geary.Engine.ValidationResult.OK;

@@ -39,6 +39,13 @@ public class Geary.AccountInformation : BaseObject {
     private const string USE_EMAIL_SIGNATURE_KEY = "use_email_signature";
     private const string EMAIL_SIGNATURE_KEY = "email_signature";
     
+    private const string goa_prefix = "goa_";
+
+    /**
+     *  The GOA account object associated to this account.
+     */
+    public Goa.Object? goa_account_object { get; private set; default = null; }
+
     //
     // "Retired" keys
     //
@@ -161,9 +168,9 @@ public class Geary.AccountInformation : BaseObject {
     public bool imap_remember_password { get; set; default = true; }
     public Geary.Credentials? smtp_credentials { get; set; default = new Geary.Credentials(null, null); }
     public bool smtp_remember_password { get; set; default = true; }
-    
+
     public bool save_drafts { get; set; default = true; }
-    
+
     private bool _save_sent_mail = true;
     private Endpoint? imap_endpoint = null;
     private Endpoint? smtp_endpoint = null;
@@ -192,6 +199,94 @@ public class Geary.AccountInformation : BaseObject {
         this.data_dir = data_directory;
         this.file = config_dir.get_child(SETTINGS_FILENAME);
 
+        load_from_file(this.file);
+
+
+    }
+
+    /**
+     * Create an account from a GOA object.
+     *
+     * Accounts fetched from Gnome Online Accounts have their id prefixed with "goa_". This
+     * function checks if such directories already exist in the configuration and data directories
+     * and loads account data from there if that is the case. Otherwise, it returns a new account
+     * base on the data provided by GOA.
+     *
+     * To check if an account has originally been fetched from GOA, use {@link is_goa()}.
+     */
+    internal AccountInformation.from_goa(Goa.Object account_object, File config_directory,
+        File data_directory) {
+        this.goa_account_object = account_object;
+        this.id = (config_directory.get_basename()).substring(4); // Omit "goa_".
+        this.config_dir = config_directory;
+        this.data_dir = data_directory;
+        this.file = config_dir.get_child(SETTINGS_FILENAME);
+
+        // If we've already stored that goa account, then load it from geary.ini instead.
+        if (file.query_exists()) {
+            load_from_file(file);
+            return;
+        }
+
+        // Create a new geary account from a goa one.
+        Goa.Mail mail = goa_account_object.get_mail();
+
+        this.nickname = "GOA Account";
+
+        string? real_name = Environment.get_real_name();
+        if (real_name != null)
+            real_name = "";
+
+        string email = mail.email_address;
+        this.primary_mailbox = new RFC822.MailboxAddress(real_name, email);
+
+
+        stdout.printf("%s\n", config_directory.get_path());
+
+
+
+
+        this.imap_credentials.user = mail.imap_user_name;
+        this.default_imap_server_host = mail.imap_host;
+        this.default_imap_server_ssl = mail.imap_use_ssl;
+        this.default_imap_server_starttls = mail.imap_use_tls;
+        if (default_imap_server_ssl)
+            this.default_imap_server_port = 993;
+        else
+            this.default_imap_server_port = 143;
+
+
+
+        this.default_smtp_server_host = mail.smtp_host;
+        this.default_smtp_server_ssl = mail.smtp_use_ssl;
+        this.default_smtp_server_starttls = mail.smtp_use_tls;
+        if (default_smtp_server_ssl)
+            this.default_smtp_server_port = 465;
+        else if (default_smtp_server_starttls)
+            this.default_smtp_server_port = 587;
+        else
+            this.default_smtp_server_port = 25;
+
+        this.default_smtp_server_noauth = !mail.smtp_use_auth;
+            if (default_smtp_server_noauth) {
+                smtp_credentials = null;
+        } else {
+            this.smtp_credentials.user = mail.smtp_user_name;
+        }
+
+        this.imap_remember_password = true;
+        this.smtp_remember_password = true;
+
+        // Try to guess a provider.
+        this.service_provider = ServiceProvider.from_domain(primary_mailbox.domain);
+        stdout.printf("Service provider %s\n", service_provider.to_string());
+
+        stdout.printf("Added %s %s\n", primary_mailbox.name, primary_mailbox.address);
+        stdout.printf("basename %s\n", config_dir.get_basename());
+
+    }
+
+    private void load_from_file(File file) {
         KeyFile key_file = new KeyFile();
         try {
             key_file.load_from_file(file.get_path() ?? "", KeyFileFlags.NONE);
@@ -281,15 +376,15 @@ public class Geary.AccountInformation : BaseObject {
     internal static void init() {
         known_endpoints = new Gee.HashMap<string, Geary.Endpoint>();
     }
-    
+
     private static Geary.Endpoint get_shared_endpoint(Service service, Endpoint endpoint) {
         string key = "%s/%s:%u".printf(service.user_label(), endpoint.remote_address.hostname,
             endpoint.remote_address.port);
-        
+
         // if already known, prefer it over this one
         if (known_endpoints.has_key(key))
             return known_endpoints.get(key);
-        
+
         // save for future use and return this one
         known_endpoints.set(key, endpoint);
         
@@ -414,7 +509,11 @@ public class Geary.AccountInformation : BaseObject {
                 assert_not_reached();
         }
     }
-    
+
+    public bool is_goa() {
+        return (config_dir.get_basename()[0:3] == goa_prefix[0:3]);
+    }
+
     /**
      * Sets the path Geary will look for or create a special folder.  This is
      * only obeyed if the server doesn't tell Geary which folders are special.
@@ -465,51 +564,52 @@ public class Geary.AccountInformation : BaseObject {
             if (services.has_imap()) {
                 yield Geary.Engine.instance.authentication_mediator.clear_password_async(
                     Service.IMAP, this);
-                
+
                 if (imap_credentials != null)
                     imap_credentials.pass = null;
             } else if (services.has_smtp()) {
                 yield Geary.Engine.instance.authentication_mediator.clear_password_async(
                     Service.SMTP, this);
-                
+
                 if (smtp_credentials != null)
                     smtp_credentials.pass = null;
             }
         }
-        
         // Only call get_passwords on anything that hasn't been set
         // (incorrectly) previously.
         ServiceFlag get_services = 0;
         if (services.has_imap() && !imap_credentials.is_complete())
             get_services |= ServiceFlag.IMAP;
-        
+
         if (services.has_smtp() && smtp_credentials != null && !smtp_credentials.is_complete())
             get_services |= ServiceFlag.SMTP;
-        
+
         ServiceFlag unset_services = services;
         if (get_services != 0)
             unset_services = yield get_passwords_async(get_services);
         else
             return true;
-        
+
         if (unset_services == 0)
             return true;
-        
-        return yield prompt_passwords_async(unset_services);
+        if (!is_goa())
+            return yield prompt_passwords_async(unset_services);
+        return true;
+
     }
-    
+
     private void check_mediator_instance() throws EngineError {
         if (Geary.Engine.instance.authentication_mediator == null)
             throw new EngineError.OPEN_REQUIRED(
                 "Geary.Engine instance needs to be open with a valid Geary.CredentialsMediator");
     }
-    
+
     private void set_imap_password(string imap_password) {
         // Don't just update the pass field, because we need imap_credentials
         // itself to change so callers can bind to its changed signal.
         imap_credentials = new Credentials(imap_credentials.user, imap_password);
     }
-    
+
     private void set_smtp_password(string smtp_password) {
         // See above.  Same argument.
         smtp_credentials = new Credentials(smtp_credentials.user, smtp_password);
@@ -550,6 +650,10 @@ public class Geary.AccountInformation : BaseObject {
         return failed_services;
     }
     
+    public async void get_goa_credentials_async(ServiceFlag services) {
+
+    }
+
     /**
      * Use the Engine's authentication mediator to prompt for the passwords for
      * the given services.  The passwords will be stored in the appropriate
@@ -560,10 +664,12 @@ public class Geary.AccountInformation : BaseObject {
      */
     public async bool prompt_passwords_async(ServiceFlag services) throws Error {
         check_mediator_instance();
-        
+
         string? imap_password, smtp_password;
         bool imap_remember_password, smtp_remember_password;
         
+        if (is_goa()) return true;
+
         if (smtp_credentials == null)
             services &= ~ServiceFlag.SMTP;
         
@@ -592,25 +698,28 @@ public class Geary.AccountInformation : BaseObject {
      * for the given services in the key store.
      */
     public async void update_stored_passwords_async(ServiceFlag services) throws Error {
+        if (is_goa())
+            return;
         check_mediator_instance();
-        
+
         CredentialsMediator mediator = Geary.Engine.instance.authentication_mediator;
-        
+
         if (services.has_imap()) {
             if (imap_remember_password)
                 yield mediator.set_password_async(Service.IMAP, this);
             else
                 yield mediator.clear_password_async(Service.IMAP, this);
         }
-        
+
         if (services.has_smtp() && smtp_credentials != null) {
             if (smtp_remember_password)
                 yield mediator.set_password_async(Service.SMTP, this);
             else
                 yield mediator.clear_password_async(Service.SMTP, this);
         }
+
     }
-    
+
     /**
      * Returns the {@link Endpoint} for the account's IMAP service.
      *
@@ -895,28 +1004,31 @@ public class Geary.AccountInformation : BaseObject {
     }
     
     public async void clear_stored_passwords_async(ServiceFlag services) throws Error {
+        if (is_goa())
+            return;
+
         Error? return_error = null;
         check_mediator_instance();
         CredentialsMediator mediator = Geary.Engine.instance.authentication_mediator;
-        
+
         try {
             if (services.has_imap())
                 yield mediator.clear_password_async(Service.IMAP, this);
         } catch (Error e) {
             return_error = e;
         }
-        
+
         try {
             if (services.has_smtp() && smtp_credentials != null)
                 yield mediator.clear_password_async(Service.SMTP, this);
         } catch (Error e) {
             return_error = e;
         }
-        
+
         if (return_error != null)
             throw return_error;
     }
-    
+
     /**
      * Deletes an account from disk.  This is used by Geary.Engine and should not
      * normally be invoked directly.

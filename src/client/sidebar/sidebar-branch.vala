@@ -66,9 +66,10 @@ public class Sidebar.Branch : Object {
 
             if (children == null)
                 children = new Gee.TreeSet<Node>(comparator_wrapper);
-            
-            bool added = children.add(child);
-            assert(added);
+            stdout.printf("adding node with entry %s\n", child.entry.to_string());
+/*
+            bool added =*/ children.add(child);
+//            assert(added);
         }
         
         public void remove_child(Node child) {
@@ -252,6 +253,7 @@ public class Sidebar.Branch : Object {
         if (options.is_hide_if_empty())
             set_show_branch(true);
         
+        stdout.printf("comparator %p default %p\n", &comparator, &default_comparator);
         Node parent_node = map.get(parent);
         Node entry_node = new Node(entry, parent_node,
             (comparator != null) ? comparator : default_comparator);

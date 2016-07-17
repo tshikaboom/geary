@@ -89,5 +89,21 @@ public enum Geary.ServiceProvider {
                 assert_not_reached();
         }
     }
+
+    public static ServiceProvider from_domain(string email_provider) {
+        switch (email_provider) {
+            case "gmail.com":
+                return GMAIL;
+
+            case "yahoo.com":
+                return YAHOO;
+
+            case "outlook.com":
+                return OUTLOOK;
+
+            default:
+                return OTHER;
+        }
+    }
 }
 

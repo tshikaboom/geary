@@ -120,9 +120,10 @@ public class AccountDialogAccountListPane : AccountDialogPane {
     }
     
     private void update_buttons() {
+        Geary.AccountInformation? info = get_account_info_for_email(get_selected_account());
         edit_action.sensitive = get_selected_account() != null;
         delete_action.sensitive = edit_action.sensitive &&
-            GearyApplication.instance.controller.get_num_accounts() > 1;
+            (GearyApplication.instance.controller.get_num_accounts() > 1 && !info.is_goa());
     }
     
     private void on_account_added(Geary.AccountInformation account) {
@@ -221,5 +222,27 @@ public class AccountDialogAccountListPane : AccountDialogPane {
             i++;
         } while (list_model.iter_next(ref iter));
     }
+
+    // Grab the account info.  While the addresses passed into this method should *always* be
+    // available in Geary, we double-check to be defensive.
+    private Geary.AccountInformation? get_account_info_for_email(string email_address) {
+    Gee.Map<string, Geary.AccountInformation> accounts;
+        try {
+            accounts = Geary.Engine.instance.get_accounts();
+        } catch (Error e) {
+            debug("Error getting account info: %s", e.message);
+
+            return null;
+        }
+
+        if (!accounts.has_key(email_address)) {
+            debug("Unable to get account info for: %s", email_address);
+
+            return null;
+        }
+
+        return accounts.get(email_address);
+    }
+
 }
 

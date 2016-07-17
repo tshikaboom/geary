@@ -53,11 +53,14 @@ public class Geary.Engine : BaseObject {
     public File? user_config_dir { get; private set; default = null; }
     public File? resource_dir { get; private set; default = null; }
     public Geary.CredentialsMediator? authentication_mediator { get; private set; default = null; }
+    public Goa.Client? goa_client { get; private set; default = null; }
     
     private bool is_initialized = false;
     private bool is_open = false;
     private Gee.HashMap<string, AccountInformation>? accounts = null;
     private Gee.HashMap<string, Account>? account_instances = null;
+
+    private const string goa_prefix = "goa_";
 
     /**
      * Fired when the engine is opened and all the existing accounts are loaded.
@@ -149,6 +152,11 @@ public class Geary.Engine : BaseObject {
         this.user_data_dir = user_data_dir;
         this.resource_dir = resource_dir;
         this.authentication_mediator = authentication_mediator;
+        this.goa_client = new Goa.Client.sync();
+
+        goa_client.account_added.connect(on_goa_accound_added);
+        goa_client.account_changed.connect(on_goa_account_changed);
+        goa_client.account_removed.connect(on_goa_account_removed);
 
         accounts = new Gee.HashMap<string, AccountInformation>();
         account_instances = new Gee.HashMap<string, Account>();
@@ -156,10 +164,18 @@ public class Geary.Engine : BaseObject {
         is_open = true;
 
         yield add_existing_accounts_async(cancellable);
+        yield add_goa_accounts_async(cancellable);
         
         opened();
    }
-
+    /**
+     * Add existing accounts from disk.
+     *
+     * This function checks for account directories in $XDG_CONFIG_DIR/geary and $XDG_DATA_DIR/geary
+     * and creates an account for each pair of directories having the same account id.
+     *
+     * This function skips GOA account directories if such directories are found.
+     */
     private async void add_existing_accounts_async(Cancellable? cancellable = null) throws Error {
         try {
             user_data_dir.make_directory_with_parents(cancellable);
@@ -189,6 +205,10 @@ public class Geary.Engine : BaseObject {
             FileInfo info = info_list.nth_data(0);
             if (info.get_file_type() == FileType.DIRECTORY) {
                 // TODO: check for geary.ini
+                if (info.get_name().length > 4 && info.get_name()[0:3] == goa_prefix[0:3]) {
+                    // Skip loading GOA accounts.
+                    continue;
+                }
                 account_list.add(new AccountInformation.from_file(user_config_dir.get_child(info.get_name()),
                     user_data_dir.get_child(info.get_name())));
             }
@@ -197,6 +217,34 @@ public class Geary.Engine : BaseObject {
         foreach(AccountInformation info in account_list)
             add_account(info);
      }
+
+    /**
+     *  Add GOA accounts.
+     *
+     * This iterates through all the available GOA accounts and selects out email and password
+     * authentication-based accounts. Since only accounts provided by GOA are added, we get the
+     * benefit of not adding existing Geary accounts fetched from GOA if their Goa.Object
+     * has gone offline (user action, stale credentials, ...).
+     */
+    private async void add_goa_accounts_async(Cancellable? cancellable = null) throws Error {
+        GLib.List<Goa.Object> list = goa_client.get_accounts();
+        Goa.Account account;
+        Goa.PasswordBased password;
+        Goa.Mail mail;
+        Goa.Object account_object;
+
+        for (int i=0; i < list.length(); i++) {
+            account_object = list.nth_data(i);
+            mail = account_object.get_mail();
+            account = account_object.get_account();
+            password = account_object.get_password_based();
+            if (mail != null && password != null) {
+                add_account(new AccountInformation.from_goa(account_object,
+                    user_config_dir.get_child(goa_prefix + account.id),
+                    user_data_dir.get_child(goa_prefix + account.id)));
+            }
+        }
+    }
 
     /**
      * Uninitializes the engine, and makes all accounts unavailable.
@@ -299,11 +347,11 @@ public class Geary.Engine : BaseObject {
             debug("Error connecting to IMAP server: %s", err.message);
             error_code |= ValidationResult.IMAP_CONNECTION_FAILED;
         }
-        
+
         if (!error_code.is_all_set(ValidationResult.IMAP_CONNECTION_FAILED)) {
             try {
                 yield imap_session.initiate_session_async(account.imap_credentials, cancellable);
-                
+
                 // Connected and initiated, still need to be sure connection authorized
                 Imap.MailboxSpecifier current_mailbox;
                 if (imap_session.get_protocol_state(out current_mailbox) != Imap.ClientSession.ProtocolState.AUTHORIZED)
@@ -449,6 +497,47 @@ public class Geary.Engine : BaseObject {
     private void on_untrusted_host(AccountInformation account_information, Endpoint endpoint,
         Endpoint.SecurityType security, TlsConnection cx, Service service) {
         untrusted_host(account_information, endpoint, security, cx, service);
+    }
+
+    private void on_goa_accound_added(Goa.Object object) {
+        Goa.Account? account = object.get_account();
+        if (account == null)
+            return;
+
+        if (!accounts.has_key(account.id))
+            try {
+                add_account(new AccountInformation.from_goa(object,
+                    user_config_dir.get_child(goa_prefix + account.id),
+                    user_data_dir.get_child(goa_prefix + account.id)));
+                } catch (Error e) {
+                    debug("Coul not add goa account %s", account.id);
+                }
+        else return;
+    }
+
+    private void on_goa_account_changed(Goa.Object object) {
+        Goa.Account? account = object.get_account();
+        if (account == null)
+            return;
+
+        if (accounts.has_key(account.id))
+            return; // Dunno what to do?
+    }
+
+    private async void on_goa_account_removed(Goa.Object object) {
+        Goa.Account? account = object.get_account();
+        if (account == null)
+            return;
+
+        if (account_instances.has_key(account.id)) {
+            Account real_account = account_instances.get(account.id);
+            try {
+                yield real_account.close_async();
+            } catch (Error err) {
+                debug("error removing goa account %s", account.id);
+            }
+            account_unavailable(real_account.information);
+        }
     }
 }
 

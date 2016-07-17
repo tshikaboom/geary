@@ -23,6 +23,19 @@ public class SecretMediator : Geary.CredentialsMediator, Object {
         }
     }
 
+    private string get_goa_key_name(Geary.Service service) {
+        switch (service) {
+            case Geary.Service.IMAP:
+                return "imap-password";
+
+            case Geary.Service.SMTP:
+                return "smtp-password";
+
+            default:
+                assert_not_reached();
+        }
+    }
+
     private Geary.Credentials get_credentials(Geary.Service service, Geary.AccountInformation account_information) {
         switch (service) {
             case Geary.Service.IMAP:
@@ -53,8 +66,26 @@ public class SecretMediator : Geary.CredentialsMediator, Object {
     public virtual async string? get_password_async(
         Geary.Service service, Geary.AccountInformation account_information, Cancellable? cancellable = null)
         throws Error {
-        string key_name = get_key_name(service, account_information.id);
-        string? password = yield Secret.password_lookup(Secret.SCHEMA_COMPAT_NETWORK, cancellable,
+
+        string? password = null;
+        string key_name;
+        if (account_information.is_goa()) {
+            key_name = get_goa_key_name(service);
+            Goa.PasswordBased password_based = account_information.goa_account_object.get_password_based();
+            if (password_based != null) {
+                stdout.printf("passwordbased not null!\n");
+                password_based.call_get_password_sync(key_name, out password, null);
+            } else
+                stdout.printf("passwordbased null!\n");
+
+            if (password != null)
+                stdout.printf("password %s\n", password);
+            return password;
+        }
+        stdout.printf("goa? %s\n", account_information.is_goa() ? "yes" : "no");
+
+        key_name = get_key_name(service, account_information.id);
+        password = yield Secret.password_lookup(Secret.SCHEMA_COMPAT_NETWORK, cancellable,
             "user", key_name);
         
         // fallback to the old keyring key string for upgrading users
@@ -124,7 +155,6 @@ public class SecretMediator : Geary.CredentialsMediator, Object {
             main_window.show_all();
             main_window.present_with_time(Gdk.CURRENT_TIME);
         }
-        
         PasswordDialog password_dialog = new PasswordDialog(main_window, services.has_smtp(),
             account_information, services);
         bool result = password_dialog.run();

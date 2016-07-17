@@ -495,6 +495,7 @@ pkg_check_modules(DEPS REQUIRED
     libsecret-1>=0.11
     libxml-2.0>=2.7.8
     gcr-3>=3.10.1
+    goa-1.0
     gobject-introspection-1.0
     webkitgtk-3.0>=2.4.0
     enchant>=1.6
@@ -502,13 +503,13 @@ pkg_check_modules(DEPS REQUIRED
 )
 
 set(ENGINE_PACKAGES
-    glib-2.0 gee-0.8 gio-2.0 gmime-2.6 posix sqlite3 libxml-2.0
+    glib-2.0 gee-0.8 gio-2.0 gmime-2.6 posix sqlite3 goa-1.0 libxml-2.0 json-glib-1.0
 )
 
 # webkitgtk-3.0 is listed as a custom VAPI (below) to ensure it's treated as a dependency and
 # built before compilation
 set(CLIENT_PACKAGES
-    gtk+-3.0 libsecret-1 libsoup-2.4 libnotify libcanberra gcr-3 enchant ${EXTRA_CLIENT_PACKAGES}
+    gtk+-3.0 libsecret-1 libsoup-2.4 libnotify libcanberra goa-1.0 gcr-3 enchant json-glib-1.0 ${EXTRA_CLIENT_PACKAGES}
 )
 
 set(CONSOLE_PACKAGES
@@ -528,15 +529,14 @@ set(CFLAGS
     -DLANGUAGE_SUPPORT_DIRECTORY=\"${LANGUAGE_SUPPORT_DIRECTORY}\"
     -DISO_CODE_639_XML=\"${ISO_CODE_639_XML}\"
     -DISO_CODE_3166_XML=\"${ISO_CODE_3166_XML}\"
-    -DGCR_API_SUBJECT_TO_CHANGE
-    -g
+    -DGCR_API_SUBJECT_TO_CHANGE -DGOA_API_IS_SUBJECT_TO_CHANGE -I/usr/lib/goa-1.0/include
+    -g -I/usr/include/json-glib-1.0 -I/usr/include/goa-1.0 -I/usr/include/goa-1.0 -lgoa-1.0
 )
 
 if (NOT DEBUG)
     set(CFLAGS
         ${CFLAGS}
-        -O2
-    )    
+    )
 endif ()
 
 if (REF_TRACKING)

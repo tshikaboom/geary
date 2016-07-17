@@ -1564,6 +1564,7 @@ public class GearyController : Geary.BaseObject {
         Gee.Collection<Geary.Folder>? unavailable) {
         if (available != null && available.size > 0) {
             foreach (Geary.Folder folder in available) {
+                stdout.printf("adding folder %s\n", folder.to_string());
                 main_window.folder_list.add_folder(folder);
                 if (folder.account == current_account) {
                     if (!main_window.main_toolbar.copy_folder_menu.has_folder(folder))
