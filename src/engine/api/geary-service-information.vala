@@ -5,21 +5,33 @@
  */
 
 public abstract class Geary.ServiceInformation : GLib.Object {
-    public string host { get; protected set; default = ""; }
-    public uint16 port { get; protected set; }
-    public bool use_starttls { get; protected set; default = false; }
-    public bool use_ssl { get; protected set; default = true; }
-    public bool remember_password { get; protected set; default = false; }
-    public Geary.Credentials credentials { get; protected set; default = new Geary.Credentials(null, null); }
-    public Geary.Service service { get; protected set; }
+    public string host { get; set; default = ""; }
+    public uint16 port { get; set; }
+    public bool use_starttls { get; set; default = false; }
+    public bool use_ssl { get; set; default = true; }
+    public bool remember_password { get; set; default = false; }
+    public Geary.Credentials credentials { get; set; default = new Geary.Credentials(null, null); }
+    public Geary.Service service { get; set; }
 
     // Used with SMTP servers
-    public bool smtp_noauth { get; protected set; default = false; }
-    public bool smtp_use_imap_credentials { get; protected set; default = false; }
+    public bool smtp_noauth { get; set; default = false; }
+    public bool smtp_use_imap_credentials { get; set; default = false; }
 
     public abstract void load_settings() throws Error;
 
     public abstract void load_credentials() throws Error;
 
     public abstract void save_settings(ref KeyFile key_file);
+
+    public ServiceInformation.with_settings(Geary.ServiceInformation from) {
+        this.host = from.host;
+        this.port = from.port;
+        this.use_starttls = from.use_starttls;
+        this.use_ssl = from.use_ssl;
+        this.remember_password = from.remember_password;
+        this.credentials = from.credentials;
+        this.service = from.service;
+        this.smtp_noauth = from.smtp_noauth;
+        this.smtp_use_imap_credentials = from.smtp_use_imap_credentials;
+    }
 }

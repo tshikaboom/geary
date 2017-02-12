@@ -35,7 +35,6 @@ engine/api/geary-folder-supports-empty.vala
 engine/api/geary-folder-supports-mark.vala
 engine/api/geary-folder-supports-move.vala
 engine/api/geary-folder-supports-remove.vala
-engine/api/geary-local-service-information.vala
 engine/api/geary-logging.vala
 engine/api/geary-named-flag.vala
 engine/api/geary-named-flags.vala
@@ -336,6 +335,7 @@ client/accounts/account-dialog-spinner-pane.vala
 client/accounts/account-spinner-page.vala
 client/accounts/add-edit-page.vala
 client/accounts/login-dialog.vala
+client/accounts/geary-local-service-information.vala
 
 client/components/client-web-view.vala
 client/components/count-badge.vala
