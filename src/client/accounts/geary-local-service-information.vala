@@ -11,9 +11,9 @@ public class Geary.LocalServiceInformation : Geary.ServiceInformation {
     // The account's configuration file.
     private File file;
 
-    public LocalServiceInformation(Geary.Service service, File file) {
+    public LocalServiceInformation(Geary.Service service, File config_directory) {
         this.service = service;
-        this.file = file;
+        this.file = config_directory.get_child(Geary.AccountInformation.SETTINGS_FILENAME);
     }
 
     public override void load_settings() throws Error {

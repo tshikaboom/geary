@@ -120,6 +120,7 @@ public class Geary.AccountInformation : BaseObject {
      * and configuration. */
     public ServiceInformation imap { get; private set; }
     public ServiceInformation smtp { get; private set; }
+    public CredentialsMediator? authentication_mediator { get; private set; default = null; }
 
     // These properties are only used if the service provider's
     // account type does not override them.
@@ -159,13 +160,18 @@ public class Geary.AccountInformation : BaseObject {
     /**
      * Creates a new, empty account info file.
      */
-    public AccountInformation(string id, File config_directory, File data_directory, Geary.ServiceInformation imap, Geary.ServiceInformation smtp) {
+    public AccountInformation(string id,
+                              File config_directory,
+                              File data_directory,
+                              Geary.ServiceInformation? imap, Geary.ServiceInformation? smtp,
+                              Geary.CredentialsMediator? authentication_mediator) {
         this.id = id;
         this.config_dir = config_directory;
         this.data_dir = data_directory;
         this.file = config_dir.get_child(SETTINGS_FILENAME);
-        this.imap = new LocalServiceInformation(Geary.Service.IMAP, file);
-        this.smtp = new LocalServiceInformation(Geary.Service.SMTP, file);
+        this.imap = imap;
+        this.smtp = smtp;
+        this.authentication_mediator = authentication_mediator;
     }
 
     /**
@@ -176,15 +182,15 @@ public class Geary.AccountInformation : BaseObject {
      */
     internal AccountInformation.from_file(string id,
                                           File config_directory,
-                                          File data_directory)
+                                          File data_directory,
+                                          Geary.ServiceInformation? imap,
+                                          Geary.ServiceInformation? smtp,
+                                          Geary.CredentialsMediator? authentication_mediator)
         throws Error {
-        this(id, config_directory, data_directory);
+        this(id, config_directory, data_directory, imap, smtp, authentication_mediator);
 
         KeyFile key_file = new KeyFile();
         key_file.load_from_file(file.get_path() ?? "", KeyFileFlags.NONE);
-
-        this.imap = new LocalServiceInformation(Geary.Service.IMAP, file);
-        this.smtp = new LocalServiceInformation(Geary.Service.SMTP, file);
 
         // This is the only required value at the moment?
         string primary_email = key_file.get_value(Config.GROUP, Config.PRIMARY_EMAIL_KEY);
@@ -428,13 +434,13 @@ public class Geary.AccountInformation : BaseObject {
         if (force_request) {
             // Delete the current password(s).
             if (services.has_imap()) {
-                yield Geary.Engine.instance.authentication_mediator.clear_password_async(
+                yield this.authentication_mediator.clear_password_async(
                     Service.IMAP, this);
 
                 if (imap.credentials != null)
                     imap.credentials.pass = null;
             } else if (services.has_smtp()) {
-                yield Geary.Engine.instance.authentication_mediator.clear_password_async(
+                yield this.authentication_mediator.clear_password_async(
                     Service.SMTP, this);
 
                 if (smtp.credentials != null)
@@ -456,17 +462,17 @@ public class Geary.AccountInformation : BaseObject {
             unset_services = yield get_passwords_async(get_services);
         else
             return true;
-        
+
         if (unset_services == 0)
             return true;
 
         return yield prompt_passwords_async(unset_services);
     }
-    
+
     private void check_mediator_instance() throws EngineError {
-        if (Geary.Engine.instance.authentication_mediator == null)
+        if (this.authentication_mediator == null)
             throw new EngineError.OPEN_REQUIRED(
-                "Geary.Engine instance needs to be open with a valid Geary.CredentialsMediator");
+                "Account %s needs to be open with a valid Geary.CredentialsMediator".printf(this.id));
     }
 
     private void set_imap_password(string imap_password) {
@@ -491,12 +497,11 @@ public class Geary.AccountInformation : BaseObject {
     public async ServiceFlag get_passwords_async(ServiceFlag services) throws Error {
         check_mediator_instance();
 
-        CredentialsMediator mediator = Geary.Engine.instance.authentication_mediator;
         ServiceFlag failed_services = 0;
-        
+
         if (services.has_imap()) {
-            string? imap_password = yield mediator.get_password_async(Service.IMAP, this);
-            
+            string? imap_password = yield this.authentication_mediator.get_password_async(Service.IMAP, this);
+
             if (imap_password != null)
                 set_imap_password(imap_password);
              else
@@ -504,7 +509,7 @@ public class Geary.AccountInformation : BaseObject {
         }
         
         if (services.has_smtp() && smtp.credentials != null) {
-            string? smtp_password = yield mediator.get_password_async(Service.SMTP, this);
+            string? smtp_password = yield this.authentication_mediator.get_password_async(Service.SMTP, this);
 
             if (smtp_password != null)
                 set_smtp_password(smtp_password);
@@ -532,7 +537,7 @@ public class Geary.AccountInformation : BaseObject {
         if (smtp.credentials == null)
             services &= ~ServiceFlag.SMTP;
         
-        if (!yield Geary.Engine.instance.authentication_mediator.prompt_passwords_async(
+        if (!yield this.authentication_mediator.prompt_passwords_async(
             services, this, out imap_password, out smtp_password,
             out imap_remember_password, out smtp_remember_password))
             return false;
@@ -559,7 +564,7 @@ public class Geary.AccountInformation : BaseObject {
     public async void update_stored_passwords_async(ServiceFlag services) throws Error {
         check_mediator_instance();
 
-        CredentialsMediator mediator = Geary.Engine.instance.authentication_mediator;
+        CredentialsMediator mediator = this.authentication_mediator;
 
         if (services.has_imap()) {
             if (imap.remember_password)
@@ -797,7 +802,7 @@ public class Geary.AccountInformation : BaseObject {
     public async void clear_stored_passwords_async(ServiceFlag services) throws Error {
         Error? return_error = null;
         check_mediator_instance();
-        CredentialsMediator mediator = Geary.Engine.instance.authentication_mediator;
+        CredentialsMediator mediator = this.authentication_mediator;
 
         try {
             if (services.has_imap())
