@@ -334,8 +334,8 @@ client/accounts/account-dialog-remove-fail-pane.vala
 client/accounts/account-dialog-spinner-pane.vala
 client/accounts/account-spinner-page.vala
 client/accounts/add-edit-page.vala
+client/accounts/local-service-information.vala
 client/accounts/login-dialog.vala
-client/accounts/geary-local-service-information.vala
 
 client/components/client-web-view.vala
 client/components/count-badge.vala
