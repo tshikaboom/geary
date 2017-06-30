@@ -238,8 +238,7 @@ public class Geary.Engine : BaseObject {
             throw new EngineError.ALREADY_EXISTS("Account %s already exists", id);
 
         return new AccountInformation(
-            id, user_config_dir.get_child(id), user_data_dir.get_child(id), null, null, null
-        );
+            id, user_config_dir.get_child(id), user_data_dir.get_child(id), null, null);
     }
 
     /**

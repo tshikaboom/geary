@@ -120,7 +120,6 @@ public class Geary.AccountInformation : BaseObject {
      * and configuration. */
     public ServiceInformation imap { get; private set; }
     public ServiceInformation smtp { get; private set; }
-    public CredentialsMediator? authentication_mediator { get; private set; default = null; }
 
     // These properties are only used if the service provider's
     // account type does not override them.
@@ -163,15 +162,13 @@ public class Geary.AccountInformation : BaseObject {
     public AccountInformation(string id,
                               File config_directory,
                               File data_directory,
-                              Geary.ServiceInformation? imap, Geary.ServiceInformation? smtp,
-                              Geary.CredentialsMediator? authentication_mediator) {
+                              Geary.ServiceInformation? imap, Geary.ServiceInformation? smtp) {
         this.id = id;
         this.config_dir = config_directory;
         this.data_dir = data_directory;
         this.file = config_dir.get_child(SETTINGS_FILENAME);
         this.imap = imap;
         this.smtp = smtp;
-        this.authentication_mediator = authentication_mediator;
     }
 
     /**
@@ -184,10 +181,9 @@ public class Geary.AccountInformation : BaseObject {
                                           File config_directory,
                                           File data_directory,
                                           Geary.ServiceInformation? imap,
-                                          Geary.ServiceInformation? smtp,
-                                          Geary.CredentialsMediator? authentication_mediator)
+                                          Geary.ServiceInformation? smtp)
         throws Error {
-        this(id, config_directory, data_directory, imap, smtp, authentication_mediator);
+        this(id, config_directory, data_directory, imap, smtp);
 
         KeyFile key_file = new KeyFile();
         key_file.load_from_file(file.get_path() ?? "", KeyFileFlags.NONE);
@@ -434,13 +430,13 @@ public class Geary.AccountInformation : BaseObject {
         if (force_request) {
             // Delete the current password(s).
             if (services.has_imap()) {
-                yield this.authentication_mediator.clear_password_async(
+                yield imap.mediator.clear_password_async(
                     Service.IMAP, this);
 
                 if (imap.credentials != null)
                     imap.credentials.pass = null;
             } else if (services.has_smtp()) {
-                yield this.authentication_mediator.clear_password_async(
+                yield smtp.mediator.clear_password_async(
                     Service.SMTP, this);
 
                 if (smtp.credentials != null)
@@ -470,22 +466,11 @@ public class Geary.AccountInformation : BaseObject {
     }
 
     private void check_mediator_instance() throws EngineError {
-        if (this.authentication_mediator == null)
+        if (this.imap.mediator == null || this.smtp.mediator == null)
             throw new EngineError.OPEN_REQUIRED(
-                "Account %s needs to be open with a valid Geary.CredentialsMediator".printf(this.id));
+                "Account %s needs to be open with valid Geary.CredentialsMediators".printf(this.id));
     }
 
-    private void set_imap_password(string imap_password) {
-        // Don't just update the pass field, because we need imap_credentials
-        // itself to change so callers can bind to its changed signal.
-        imap.credentials = new Credentials(imap.credentials.user, imap_password);
-    }
-
-    private void set_smtp_password(string smtp_password) {
-        // See above.  Same argument.
-        smtp.credentials = new Credentials(smtp.credentials.user, smtp_password);
-    }
-    
     /**
      * Use Engine's authentication mediator to retrieve the passwords for the
      * given services.  The passwords will be stored in the appropriate
@@ -500,19 +485,19 @@ public class Geary.AccountInformation : BaseObject {
         ServiceFlag failed_services = 0;
 
         if (services.has_imap()) {
-            string? imap_password = yield this.authentication_mediator.get_password_async(Service.IMAP, this);
+            string? imap_password = yield imap.mediator.get_password_async(Service.IMAP, this);
 
             if (imap_password != null)
-                set_imap_password(imap_password);
+                imap.set_password(imap_password);
              else
                 failed_services |= ServiceFlag.IMAP;
         }
         
         if (services.has_smtp() && smtp.credentials != null) {
-            string? smtp_password = yield this.authentication_mediator.get_password_async(Service.SMTP, this);
+            string? smtp_password = yield smtp.mediator.get_password_async(Service.SMTP, this);
 
             if (smtp_password != null)
-                set_smtp_password(smtp_password);
+                smtp.set_password(smtp_password);
             else
                 failed_services |= ServiceFlag.SMTP;
         }
@@ -534,21 +519,25 @@ public class Geary.AccountInformation : BaseObject {
         string? imap_password, smtp_password;
         bool imap_remember_password, smtp_remember_password;
 
+        /* This is a workaround. Assume IMAP and SMTP use the same mediator so
+         * as to minimize code refactoring for now.
+         */
+
         if (smtp.credentials == null)
             services &= ~ServiceFlag.SMTP;
         
-        if (!yield this.authentication_mediator.prompt_passwords_async(
+        if (!yield imap.mediator.prompt_passwords_async(
             services, this, out imap_password, out smtp_password,
             out imap_remember_password, out smtp_remember_password))
             return false;
 
         if (services.has_imap()) {
-            set_imap_password(imap_password);
+            imap.set_password(imap_password);
             this.imap.remember_password = imap_remember_password;
         }
 
         if (services.has_smtp()) {
-            set_smtp_password(smtp_password);
+            smtp.set_password(smtp_password);
             this.smtp.remember_password = smtp_remember_password;
         }
 
@@ -564,23 +553,22 @@ public class Geary.AccountInformation : BaseObject {
     public async void update_stored_passwords_async(ServiceFlag services) throws Error {
         check_mediator_instance();
 
-        CredentialsMediator mediator = this.authentication_mediator;
 
         if (services.has_imap()) {
             if (imap.remember_password)
-                yield mediator.set_password_async(Service.IMAP, this);
+                yield imap.mediator.set_password_async(Service.IMAP, this);
             else
-                yield mediator.clear_password_async(Service.IMAP, this);
+                yield imap.mediator.clear_password_async(Service.IMAP, this);
         }
 
         if (services.has_smtp() && smtp.credentials != null) {
             if (smtp.remember_password)
-                yield mediator.set_password_async(Service.SMTP, this);
+                yield smtp.mediator.set_password_async(Service.SMTP, this);
             else
-                yield mediator.clear_password_async(Service.SMTP, this);
+                yield smtp.mediator.clear_password_async(Service.SMTP, this);
         }
     }
-    
+
     /**
      * Returns the {@link Endpoint} for the account's IMAP service.
      *
@@ -591,7 +579,7 @@ public class Geary.AccountInformation : BaseObject {
     public Endpoint get_imap_endpoint() {
         if (imap_endpoint != null)
             return imap_endpoint;
-        
+
         switch (service_provider) {
             case ServiceProvider.GMAIL:
                 imap_endpoint = ImapEngine.GmailAccount.generate_imap_endpoint();
@@ -802,18 +790,17 @@ public class Geary.AccountInformation : BaseObject {
     public async void clear_stored_passwords_async(ServiceFlag services) throws Error {
         Error? return_error = null;
         check_mediator_instance();
-        CredentialsMediator mediator = this.authentication_mediator;
 
         try {
             if (services.has_imap())
-                yield mediator.clear_password_async(Service.IMAP, this);
+                yield imap.mediator.clear_password_async(Service.IMAP, this);
         } catch (Error e) {
             return_error = e;
         }
 
         try {
             if (services.has_smtp() && smtp.credentials != null)
-                yield mediator.clear_password_async(Service.SMTP, this);
+                yield smtp.mediator.clear_password_async(Service.SMTP, this);
         } catch (Error e) {
             return_error = e;
         }

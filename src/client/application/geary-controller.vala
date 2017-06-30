@@ -438,10 +438,8 @@ public class GearyController : Geary.BaseObject {
                             id,
                             Geary.Engine.instance.user_config_dir.get_child(id),
                             Geary.Engine.instance.user_data_dir.get_child(id),
-                            new Geary.LocalServiceInformation(Geary.Service.IMAP, Geary.Engine.instance.user_config_dir.get_child(id)),
-                            new Geary.LocalServiceInformation(Geary.Service.SMTP, Geary.Engine.instance.user_config_dir.get_child(id)),
-                            mediator
-                        )
+                            new Geary.LocalServiceInformation(Geary.Service.IMAP, Geary.Engine.instance.user_config_dir.get_child(id), mediator),
+                            new Geary.LocalServiceInformation(Geary.Service.SMTP, Geary.Engine.instance.user_config_dir.get_child(id), mediator))
                     );
 /*                } catch (Error err) {
                     warning("Ignoring empty/bad config in %s: %s",

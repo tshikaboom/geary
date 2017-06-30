@@ -11,9 +11,12 @@ public class Geary.LocalServiceInformation : Geary.ServiceInformation {
     // The account's configuration file.
     private File file;
 
-    public LocalServiceInformation(Geary.Service service, File config_directory) {
+    public LocalServiceInformation(Geary.Service service,
+                                   File config_directory,
+                                   Geary.CredentialsMediator? mediator) {
         this.service = service;
         this.file = config_directory.get_child(Geary.AccountInformation.SETTINGS_FILENAME);
+        this.mediator = mediator;
     }
 
     public override void load_settings() throws Error {

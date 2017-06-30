@@ -12,6 +12,7 @@ public abstract class Geary.ServiceInformation : GLib.Object {
     public bool remember_password { get; set; default = false; }
     public Geary.Credentials credentials { get; set; default = new Geary.Credentials(null, null); }
     public Geary.Service service { get; set; }
+    public Geary.CredentialsMediator? mediator { get; set; default = null; }
 
     // Used with SMTP servers
     public bool smtp_noauth { get; set; default = false; }
@@ -33,5 +34,9 @@ public abstract class Geary.ServiceInformation : GLib.Object {
         this.service = from.service;
         this.smtp_noauth = from.smtp_noauth;
         this.smtp_use_imap_credentials = from.smtp_use_imap_credentials;
+    }
+
+    public void set_password(string password) {
+        this.credentials = new Credentials(this.credentials.user, password);
     }
 }
