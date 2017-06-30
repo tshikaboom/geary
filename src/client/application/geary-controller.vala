@@ -452,6 +452,26 @@ public class GearyController : Geary.BaseObject {
             Geary.Engine.instance.add_account(info);
      }
 
+    private async void add_goa_accounts_async(Cancellable? cancellable = null) throws Error {
+        GLib.List<Goa.Object> list = goa_client.get_accounts();
+        Goa.Account account;
+        Goa.PasswordBased password;
+        Goa.Mail mail;
+        Goa.Object account_object;
+
+        for (int i=0; i < list.length(); i++) {
+            account_object = list.nth_data(i);
+            mail = account_object.get_mail();
+            account = account_object.get_account();
+            password = account_object.get_password_based();
+            if (mail != null && password != null) {
+                add_account(new AccountInformation.from_goa(account_object,
+                    user_config_dir.get_child(goa_prefix + account.id),
+                    user_data_dir.get_child(goa_prefix + account.id)));
+            }
+        }
+    }
+
     /**
      * Opens or queues a new composer addressed to a specific email address.
      */
