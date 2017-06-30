@@ -513,6 +513,7 @@ pkg_check_modules(DEPS REQUIRED
     webkit2gtk-web-extension-4.0>=${TARGET_WEBKIT}
     javascriptcoregtk-4.0>=${TARGET_WEBKIT}
     enchant>=1.6
+    goa-1.0
     ${EXTRA_CLIENT_PKG_CONFIG}
 )
 
@@ -580,6 +581,7 @@ set(CFLAGS
     -DISO_CODE_639_XML=\"${ISO_CODE_639_XML}\"
     -DISO_CODE_3166_XML=\"${ISO_CODE_3166_XML}\"
     -DGCR_API_SUBJECT_TO_CHANGE
+    -DGOA_API_IS_SUBJECT_TO_CHANGE
 )
 
 if (REF_TRACKING)

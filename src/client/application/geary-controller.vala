@@ -289,6 +289,7 @@ public class GearyController : Geary.BaseObject {
                 this.application.get_resource_directory()
             );
             yield add_existing_accounts_async(null);
+            yield add_goa_accounts_async(null);
 
             if (Geary.Engine.instance.get_accounts().size == 0) {
                 create_account();
@@ -454,25 +455,32 @@ public class GearyController : Geary.BaseObject {
      }
 
     private async void add_goa_accounts_async(Cancellable? cancellable = null) throws Error {
+        this.goa_client = new Goa.Client(cancellable);
         GLib.List<Goa.Object> list = goa_client.get_accounts();
         Goa.Account account;
         Goa.PasswordBased password;
         Goa.Mail mail;
         Goa.Object account_object;
+        Gee.List<Geary.AccountInformation> account_list = new Gee.ArrayList<Geary.AccountInformation>();
 
         for (int i=0; i < list.length(); i++) {
             account_object = list.nth_data(i);
             mail = account_object.get_mail();
             account = account_object.get_account();
             password = account_object.get_password_based();
+            stdout.printf("looking for mail&pass in %s", account.id);
             if (mail != null && password != null) {
-                Geary.Engine.instance.add_account(new Geary.AccountInformation(account.id,
+                stdout.printf("adding goa account %s", account.id);
+                account_list.add(new Geary.AccountInformation(account.id,
                     Geary.Engine.instance.user_config_dir.get_child(account.id),
                     Geary.Engine.instance.user_data_dir.get_child(account.id),
-                    new Geary.GOAServiceInformation(Geary.Service.IMAP, password),
-                    new Geary.GOAServiceInformation(Geary.Service.SMTP, password)));
+                    new Geary.GOAServiceInformation(Geary.Service.IMAP, new GOAMediator(mail, password), mail),
+                    new Geary.GOAServiceInformation(Geary.Service.SMTP, new GOAMediator(mail, password), mail)));
             }
         }
+
+        foreach (Geary.AccountInformation info in account_list)
+            Geary.Engine.instance.add_account(info);
     }
 
     /**
