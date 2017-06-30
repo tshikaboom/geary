@@ -545,6 +545,7 @@ set(CLIENT_PACKAGES
   libsecret-1
   libsoup-2.4
   webkit2gtk-4.0
+  goa-1.0
   ${EXTRA_CLIENT_PACKAGES}
 )
 
