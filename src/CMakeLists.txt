@@ -322,6 +322,7 @@ client/application/geary-application.vala
 client/application/geary-args.vala
 client/application/geary-config.vala
 client/application/geary-controller.vala
+client/application/goa-mediator.vala
 client/application/secret-mediator.vala
 
 client/accounts/account-dialog.vala
@@ -334,6 +335,7 @@ client/accounts/account-dialog-remove-fail-pane.vala
 client/accounts/account-dialog-spinner-pane.vala
 client/accounts/account-spinner-page.vala
 client/accounts/add-edit-page.vala
+client/accounts/goa-service-information.vala
 client/accounts/local-service-information.vala
 client/accounts/login-dialog.vala
 

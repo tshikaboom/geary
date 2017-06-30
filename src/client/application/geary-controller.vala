@@ -126,6 +126,7 @@ public class GearyController : Geary.BaseObject {
     private Geary.Nonblocking.Mutex untrusted_host_prompt_mutex = new Geary.Nonblocking.Mutex();
     private Gee.HashSet<Geary.Endpoint> validating_endpoints = new Gee.HashSet<Geary.Endpoint>();
     private Geary.Revokable? revokable = null;
+    private Goa.Client goa_client;
     
     // List of windows we're waiting to close before Geary closes.
     private Gee.List<ComposerWidget> waiting_to_close = new Gee.ArrayList<ComposerWidget>();
@@ -465,9 +466,11 @@ public class GearyController : Geary.BaseObject {
             account = account_object.get_account();
             password = account_object.get_password_based();
             if (mail != null && password != null) {
-                add_account(new AccountInformation.from_goa(account_object,
-                    user_config_dir.get_child(goa_prefix + account.id),
-                    user_data_dir.get_child(goa_prefix + account.id)));
+                Geary.Engine.instance.add_account(new Geary.AccountInformation(account.id,
+                    Geary.Engine.instance.user_config_dir.get_child(account.id),
+                    Geary.Engine.instance.user_data_dir.get_child(account.id),
+                    new Geary.GOAServiceInformation(Geary.Service.IMAP, password),
+                    new Geary.GOAServiceInformation(Geary.Service.SMTP, password)));
             }
         }
     }
