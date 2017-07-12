@@ -10,7 +10,7 @@ public class AccountLoader : GLib.Object {
 
     public AccountLoader() {
         try {
-            goa_client = new Goa.Client.sync();
+            this.goa_client = new Goa.Client.sync();
         } catch (GLib.Error e) {
             stdout.printf("goaerror");
         }
@@ -88,6 +88,7 @@ public class AccountLoader : GLib.Object {
                 load_from_goa(mail, info);
                 account_list.add(info);
                 stdout.printf("added goa account w/ mediator %p\n", mediator);
+                yield store_to_file(info);
             }
         }
 
@@ -115,7 +116,7 @@ public class AccountLoader : GLib.Object {
         Goa.Object? goa_object;
 
         string creds_method = Geary.Config.get_string_value(key_file, Geary.Config.GROUP, Geary.Config.CREDENTIALS_ORIGIN_KEY, Geary.ServiceInformation.METHOD_LIBSECRET);
-
+        stdout.printf("creds method %s\n", creds_method);
         switch (creds_method) {
             case Geary.ServiceInformation.METHOD_LIBSECRET:
                 mediator = new SecretMediator();
@@ -257,7 +258,7 @@ public class AccountLoader : GLib.Object {
     }
 
     public static async void store_to_file(Geary.AccountInformation info, Cancellable? cancellable = null) {
-        File? file = info.config_dir.get_child(info.id).get_child(Geary.Config.SETTINGS_FILENAME);
+        File? file = info.config_dir.get_child(Geary.Config.SETTINGS_FILENAME);
 
         if (file == null) {
             warning("Cannot save account, no file set.\n");
@@ -289,7 +290,7 @@ public class AccountLoader : GLib.Object {
                 debug("Error creating account info file: %s", err.message);
             }
         }
-
+        stdout.printf("saving acct %s mediator %s\n", info.id, info.imap.credentials_method);
         KeyFile key_file = new KeyFile();
         key_file.set_value(Geary.Config.GROUP, Geary.Config.CREDENTIALS_ORIGIN_KEY, info.imap.credentials_method);
         key_file.set_value(Geary.Config.GROUP, Geary.Config.REAL_NAME_KEY, info.primary_mailbox.name);
