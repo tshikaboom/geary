@@ -5,6 +5,9 @@
  */
 
 public abstract class Geary.ServiceInformation : GLib.Object {
+    public const string METHOD_LIBSECRET = "libsecret";
+    public const string METHOD_GOA = "goa";
+
     public string host { get; set; default = ""; }
     public uint16 port { get; set; }
     public bool use_starttls { get; set; default = false; }
@@ -13,28 +16,7 @@ public abstract class Geary.ServiceInformation : GLib.Object {
     public Geary.Credentials credentials { get; set; default = new Geary.Credentials(null, null); }
     public Geary.Service service { get; set; }
     public Geary.CredentialsMediator? mediator { get; set; default = null; }
-
-    public enum auth_method {
-        LIBSECRET,
-        GOA,
-        NONE;
-
-        public string to_string() {
-            switch(this) {
-                case LIBSECRET:
-                    return "libsecret";
-
-                case GOA:
-                    return "goa";
-
-                case NONE:
-                    return "none";
-            }
-            return "";
-        }
-    }
-
-    public auth_method method { get; set; default = ServiceInformation.auth_method.NONE; }
+    public string credentials_method { get; set; default = ""; }
 
     // Used with SMTP servers
     public bool smtp_noauth { get; set; default = false; }

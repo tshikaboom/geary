@@ -288,9 +288,10 @@ public class GearyController : Geary.BaseObject {
                 this.application.get_resource_directory()
             );
             stdout.printf("adding local accounts...\n");
-            yield AccountLoader.add_existing_accounts_async(null);
+            AccountLoader loader = new AccountLoader();
+            yield loader.add_existing_accounts_async(null);
             stdout.printf("adding goa accounts...\n");
-            yield AccountLoader.add_goa_accounts_async(null);
+            yield loader.add_goa_accounts_async(null);
 
             if (Geary.Engine.instance.get_accounts().size == 0) {
                 create_account();
@@ -937,8 +938,8 @@ public class GearyController : Geary.BaseObject {
                 real_account_information = get_real_account_information(account_information);
                 real_account_information.copy_from(account_information);
             }
-            
-            real_account_information.store_async.begin(cancellable);
+
+            yield AccountLoader.store_to_file(real_account_information);
             do_update_stored_passwords_async.begin(Geary.ServiceFlag.IMAP | Geary.ServiceFlag.SMTP,
                 real_account_information);
             

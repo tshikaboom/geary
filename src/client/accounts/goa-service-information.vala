@@ -16,6 +16,7 @@ public class Geary.GOAServiceInformation : Geary.ServiceInformation {
         this.service = service;
         this.mediator = mediator;
         this.mail_object = mail_object;
+        this.credentials_method = "METHOD_GOA";
     }
 
     public override void load_settings() throws Error {
