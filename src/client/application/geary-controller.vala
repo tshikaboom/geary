@@ -126,8 +126,7 @@ public class GearyController : Geary.BaseObject {
     private Geary.Nonblocking.Mutex untrusted_host_prompt_mutex = new Geary.Nonblocking.Mutex();
     private Gee.HashSet<Geary.Endpoint> validating_endpoints = new Gee.HashSet<Geary.Endpoint>();
     private Geary.Revokable? revokable = null;
-    private Goa.Client goa_client;
-    
+
     // List of windows we're waiting to close before Geary closes.
     private Gee.List<ComposerWidget> waiting_to_close = new Gee.ArrayList<ComposerWidget>();
     
@@ -288,8 +287,10 @@ public class GearyController : Geary.BaseObject {
                 this.application.get_user_data_directory(),
                 this.application.get_resource_directory()
             );
-            yield add_existing_accounts_async(null);
-            yield add_goa_accounts_async(null);
+            stdout.printf("adding local accounts...\n");
+            yield AccountLoader.add_existing_accounts_async(null);
+            stdout.printf("adding goa accounts...\n");
+            yield AccountLoader.add_goa_accounts_async(null);
 
             if (Geary.Engine.instance.get_accounts().size == 0) {
                 create_account();
@@ -403,86 +404,6 @@ public class GearyController : Geary.BaseObject {
         create_compose_widget(ComposerWidget.ComposeType.NEW_MESSAGE);
     }
 
-    private async void add_existing_accounts_async(Cancellable? cancellable = null) throws Error {
-        try {
-            Geary.Engine.instance.user_data_dir.make_directory_with_parents(cancellable);
-        } catch (IOError e) {
-            if (!(e is IOError.EXISTS))
-                throw e;
-        }
-
-        FileEnumerator enumerator
-            = yield Geary.Engine.instance.user_config_dir.enumerate_children_async("standard::*",
-                FileQueryInfoFlags.NONE, Priority.DEFAULT, cancellable);
-
-        Gee.List<Geary.AccountInformation> account_list = new Gee.ArrayList<Geary.AccountInformation>();
-
-        Geary.CredentialsMediator mediator = new SecretMediator();
-
-        for (;;) {
-            List<FileInfo> info_list;
-            try {
-                info_list = yield enumerator.next_files_async(1, Priority.DEFAULT, cancellable);
-            } catch (Error e) {
-                debug("Error enumerating existing accounts: %s", e.message);
-                break;
-            }
-
-            if (info_list.length() == 0)
-                break;
-
-            FileInfo info = info_list.nth_data(0);
-            if (info.get_file_type() == FileType.DIRECTORY) {
-//                try {
-                    string id = info.get_name();
-                    account_list.add(
-                        new Geary.AccountInformation(
-                            id,
-                            Geary.Engine.instance.user_config_dir.get_child(id),
-                            Geary.Engine.instance.user_data_dir.get_child(id),
-                            new Geary.LocalServiceInformation(Geary.Service.IMAP, Geary.Engine.instance.user_config_dir.get_child(id), mediator),
-                            new Geary.LocalServiceInformation(Geary.Service.SMTP, Geary.Engine.instance.user_config_dir.get_child(id), mediator))
-                    );
-/*                } catch (Error err) {
-                    warning("Ignoring empty/bad config in %s: %s",
-                            info.get_name(), err.message);
-                } */
-            }
-        }
-
-        foreach(Geary.AccountInformation info in account_list)
-            Geary.Engine.instance.add_account(info);
-     }
-
-    private async void add_goa_accounts_async(Cancellable? cancellable = null) throws Error {
-        this.goa_client = new Goa.Client(cancellable);
-        GLib.List<Goa.Object> list = goa_client.get_accounts();
-        Goa.Account account;
-        Goa.PasswordBased password;
-        Goa.Mail mail;
-        Goa.Object account_object;
-        Gee.List<Geary.AccountInformation> account_list = new Gee.ArrayList<Geary.AccountInformation>();
-
-        for (int i=0; i < list.length(); i++) {
-            account_object = list.nth_data(i);
-            mail = account_object.get_mail();
-            account = account_object.get_account();
-            password = account_object.get_password_based();
-            stdout.printf("looking for mail&pass in %s", account.id);
-            if (mail != null && password != null) {
-                stdout.printf("adding goa account %s", account.id);
-                account_list.add(new Geary.AccountInformation(account.id,
-                    Geary.Engine.instance.user_config_dir.get_child(account.id),
-                    Geary.Engine.instance.user_data_dir.get_child(account.id),
-                    new Geary.GOAServiceInformation(Geary.Service.IMAP, new GOAMediator(mail, password), mail),
-                    new Geary.GOAServiceInformation(Geary.Service.SMTP, new GOAMediator(mail, password), mail)));
-            }
-        }
-
-        foreach (Geary.AccountInformation info in account_list)
-            Geary.Engine.instance.add_account(info);
-    }
-
     /**
      * Opens or queues a new composer addressed to a specific email address.
      */
@@ -545,7 +466,7 @@ public class GearyController : Geary.BaseObject {
         mark_unread.label = _("Mark as _Unread");
         entries += mark_unread;
         add_accelerator("<Shift>U", ACTION_MARK_AS_UNREAD);
-        
+
         Gtk.ActionEntry mark_starred = { ACTION_MARK_AS_STARRED, "star-symbolic", TRANSLATABLE, "S", null,
             on_mark_as_starred };
         mark_starred.label = _("_Star");
@@ -555,13 +476,13 @@ public class GearyController : Geary.BaseObject {
             null, on_mark_as_unstarred };
         mark_unstarred.label = _("U_nstar");
         entries += mark_unstarred;
-        
+
         Gtk.ActionEntry mark_spam = { ACTION_MARK_AS_SPAM, null, TRANSLATABLE, "<Ctrl>J", null,
             on_mark_as_spam };
         mark_spam.label = MARK_AS_SPAM_LABEL;
         entries += mark_spam;
         add_accelerator("exclam", ACTION_MARK_AS_SPAM); // Exclamation mark (!)
-        
+
         Gtk.ActionEntry copy_menu = { ACTION_COPY_MENU, null, TRANSLATABLE, "L",
             _("Add label"), null };
         copy_menu.label = _("_Label");
@@ -624,7 +545,7 @@ public class GearyController : Geary.BaseObject {
         Gtk.ActionEntry empty_trash = { ACTION_EMPTY_TRASH, null, null, null, null, on_empty_trash };
         empty_trash.label = _("Empty _Trash…");
         entries += empty_trash;
-        
+
         Gtk.ActionEntry undo = { ACTION_UNDO, "edit-undo-symbolic", null, "<Ctrl>Z", null, on_revoke };
         entries += undo;
         
@@ -703,7 +624,7 @@ public class GearyController : Geary.BaseObject {
         account.email_removed.connect(on_account_email_removed);
         connect_account_async.begin(account, cancellable_open_account);
     }
-    
+
     private void close_account(Geary.Account account) {
         account.report_problem.disconnect(on_report_problem);
         account.email_removed.disconnect(on_account_email_removed);

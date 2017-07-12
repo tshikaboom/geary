@@ -32,7 +32,7 @@ public class Geary.AccountInformation : BaseObject {
     public File? config_dir { get; private set; default = null; }
     public File? data_dir { get; private set; default = null; }
 
-    internal File? file = null;
+    public File? file = null;
 
     //
     // IMPORTANT: When adding new properties, be sure to add them to the copy method.
@@ -90,7 +90,7 @@ public class Geary.AccountInformation : BaseObject {
     public Gee.List<Geary.RFC822.MailboxAddress>? alternate_mailboxes { get; private set; default = null; }
 
     public Geary.ServiceProvider service_provider {
-        get; set; default = Geary.ServiceProvider.GMAIL;
+        get; set; default = Geary.ServiceProvider.OTHER;
     }
     public int prefetch_period_days {
         get; set; default = DEFAULT_PREFETCH_PERIOD_DAYS;
@@ -169,85 +169,9 @@ public class Geary.AccountInformation : BaseObject {
         this.file = config_dir.get_child(SETTINGS_FILENAME);
         this.imap = imap;
         this.smtp = smtp;
+        stdout.printf("acctinfo %s: mediators are %p %p\n", this.id, imap.mediator, smtp.mediator);
     }
 
-    /**
-     * Loads an account info from a config directory.
-     *
-     * Throws an error if the config file was not found, could not be
-     * parsed, or doesn't have all required fields.
-     */
-    internal AccountInformation.from_file(string id,
-                                          File config_directory,
-                                          File data_directory,
-                                          Geary.ServiceInformation? imap,
-                                          Geary.ServiceInformation? smtp)
-        throws Error {
-        this(id, config_directory, data_directory, imap, smtp);
-
-        KeyFile key_file = new KeyFile();
-        key_file.load_from_file(file.get_path() ?? "", KeyFileFlags.NONE);
-
-        // This is the only required value at the moment?
-        string primary_email = key_file.get_value(Config.GROUP, Config.PRIMARY_EMAIL_KEY);
-        string real_name = Config.get_string_value(key_file, Config.GROUP, Config.REAL_NAME_KEY);
-
-        this.primary_mailbox = new RFC822.MailboxAddress(real_name, primary_email);
-        this.nickname = Config.get_string_value(key_file, Config.GROUP, Config.NICKNAME_KEY);
-
-        // Store alternate emails in a list of case-insensitive strings
-        Gee.List<string> alt_email_list = Config.get_string_list_value(key_file, Config.GROUP, Config.ALTERNATE_EMAILS_KEY);
-        if (alt_email_list.size != 0) {
-            foreach (string alt_email in alt_email_list) {
-                RFC822.MailboxAddresses mailboxes = new RFC822.MailboxAddresses.from_rfc822_string(alt_email);
-                foreach (RFC822.MailboxAddress mailbox in mailboxes.get_all())
-                add_alternate_mailbox(mailbox);
-            }
-        }
-
-        imap.load_credentials();
-        smtp.load_credentials();
-
-        this.service_provider = Geary.ServiceProvider.from_string(
-            Config.get_string_value(
-                key_file, Config.GROUP, Config.SERVICE_PROVIDER_KEY, Geary.ServiceProvider.GMAIL.to_string()));
-        this.prefetch_period_days = Config.get_int_value(
-            key_file, Config.GROUP, Config.PREFETCH_PERIOD_DAYS_KEY, this.prefetch_period_days);
-        this.save_sent_mail = Config.get_bool_value(
-            key_file, Config.GROUP, Config.SAVE_SENT_MAIL_KEY, this.save_sent_mail);
-        this.ordinal = Config.get_int_value(
-            key_file, Config.GROUP, Config.ORDINAL_KEY, this.ordinal);
-        this.use_email_signature = Config.get_bool_value(
-            key_file, Config.GROUP, Config.USE_EMAIL_SIGNATURE_KEY, this.use_email_signature);
-        this.email_signature = Config.get_escaped_string(
-            key_file, Config.GROUP, Config.EMAIL_SIGNATURE_KEY, this.email_signature);
-
-        if (this.ordinal >= AccountInformation.default_ordinal)
-            AccountInformation.default_ordinal = this.ordinal + 1;
-
-        if (service_provider == ServiceProvider.OTHER) {
-            imap.load_settings();
-            smtp.load_settings();
-
-            if (smtp.smtp_use_imap_credentials) {
-                this.smtp.credentials.user = imap.credentials.user;
-                this.smtp.credentials.pass = imap.credentials.pass;
-            }
-        }
-
-        this.drafts_folder_path = build_folder_path(
-            Config.get_string_list_value(key_file, Config.GROUP, Config.DRAFTS_FOLDER_KEY));
-        this.sent_mail_folder_path = build_folder_path(
-            Config.get_string_list_value(key_file, Config.GROUP, Config.SENT_MAIL_FOLDER_KEY));
-        this.spam_folder_path = build_folder_path(
-            Config.get_string_list_value(key_file, Config.GROUP, Config.SPAM_FOLDER_KEY));
-        this.trash_folder_path = build_folder_path(
-            Config.get_string_list_value(key_file, Config.GROUP, Config.TRASH_FOLDER_KEY));
-        this.archive_folder_path = build_folder_path(
-            Config.get_string_list_value(key_file, Config.GROUP, Config.ARCHIVE_FOLDER_KEY));
-
-        this.save_drafts = Config.get_bool_value(key_file, Config.GROUP, Config.SAVE_DRAFTS_KEY, true);
-    }
 
     ~AccountInformation() {
         if (imap_endpoint != null)
@@ -466,6 +390,7 @@ public class Geary.AccountInformation : BaseObject {
     }
 
     private void check_mediator_instance() throws EngineError {
+        stdout.printf("acctinfo: mediators @ %p %p\n", this.imap.mediator, this.smtp.mediator);
         if (this.imap.mediator == null || this.smtp.mediator == null)
             throw new EngineError.OPEN_REQUIRED(
                 "Account %s needs to be open with valid Geary.CredentialsMediators".printf(this.id));
@@ -690,7 +615,7 @@ public class Geary.AccountInformation : BaseObject {
         }
     }
     
-    private Geary.FolderPath? build_folder_path(Gee.List<string>? parts) {
+    public static Geary.FolderPath? build_folder_path(Gee.List<string>? parts) {
         if (parts == null || parts.size == 0)
             return null;
         
