@@ -51,3 +51,35 @@ public class Geary.Credentials : BaseObject, Gee.Hashable<Geary.Credentials> {
     }
 }
 
+public class Geary.PasswordCredentials : BaseObject, Gee.Hashable<Geary.Credentials> {
+    public string? user { get; set; }
+    public string? pass { get; set; }
+    
+    public Credentials(string? user, string? pass) {
+        this.user = user;
+        this.pass = pass;
+    }
+    
+    public bool is_complete() {
+        return (user != null) && (pass != null);
+    }
+    
+    public Credentials copy() {
+        return new Credentials(user, pass);
+    }
+    
+    public string to_string() {
+        return user;
+    }
+    
+    public bool equal_to(Geary.Credentials c) {
+        if (this == c)
+            return true;
+        
+        return user == c.user && pass == c.pass;
+    }
+    
+    public uint hash() {
+        return "%s%s".printf(user ?? "", pass ?? "").hash();
+    }
+}

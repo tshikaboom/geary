@@ -167,8 +167,8 @@ public class Geary.AccountInformation : BaseObject {
         this.config_dir = config_directory;
         this.data_dir = data_directory;
         this.file = config_dir.get_child(SETTINGS_FILENAME);
-        this.imap = imap;
-        this.smtp = smtp;
+        this.imap.copy_from(imap);
+        this.smtp = (smtp);
     }
 
     ~AccountInformation() {
