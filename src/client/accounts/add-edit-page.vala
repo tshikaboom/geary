@@ -706,7 +706,7 @@ public class AddEditPage : Gtk.Box {
 		this.smtp_starttls,
 		this.smtp_ssl,
 		this.remember_password,
-		smtp_credentials,
+			smtp_credentials,
 		info.smtp.credentials_method,
 		this.smtp_noauth,
 		this.smtp_use_imap_credentials));
