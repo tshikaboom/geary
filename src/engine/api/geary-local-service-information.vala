@@ -17,7 +17,7 @@ public class Geary.LocalServiceInformation : Geary.ServiceInformation {
         this.service = service;
         this.file = config_directory.get_child(Geary.AccountInformation.SETTINGS_FILENAME);
         this.mediator = mediator;
-        this.credentials_method = "METHOD_LIBSECRET";
+        this.credentials_method = METHOD_LIBSECRET;
     }
 
     public override void load_settings(KeyFile? key_file = null) throws Error {

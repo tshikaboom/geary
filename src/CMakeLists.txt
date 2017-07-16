@@ -338,6 +338,7 @@ client/accounts/account-manager.vala
 client/accounts/account-spinner-page.vala
 client/accounts/add-edit-page.vala
 client/accounts/goa-service-information.vala
+client/accounts/preferences-service-information.vala
 client/accounts/login-dialog.vala
 
 client/components/client-web-view.vala

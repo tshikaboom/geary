@@ -690,29 +690,30 @@ public class AddEditPage : Gtk.Box {
                 this.real_name.strip(), this.email_address.strip()
             );
             info.nickname = this.nickname.strip();
-            info.imap.credentials = imap_credentials;
-            info.smtp.credentials = smtp_credentials;
-            info.imap.remember_password = this.remember_password;
-            info.smtp.remember_password = this.remember_password;
-            info.service_provider = this.get_service_provider();
-            info.save_sent_mail = this.save_sent_mail;
-            info.imap.host = this.imap_host;
-            info.imap.port = this.imap_port;
-            info.imap.use_ssl = this.imap_ssl;
-            info.imap.use_starttls = this.imap_starttls;
-            info.smtp.host = this.smtp_host.strip();
-            info.smtp.port = this.smtp_port;
-            info.smtp.use_ssl = this.smtp_ssl;
-            info.smtp.use_starttls = this.smtp_starttls;
-            info.smtp.smtp_use_imap_credentials = this.smtp_use_imap_credentials;
-            info.smtp.smtp_noauth = this.smtp_noauth;
+            info.set_imap_information(new Geary.PreferencesServiceInformation(
+		Geary.Service.IMAP,
+		this.imap_host,
+		this.imap_port,
+		this.imap_starttls,
+		this.imap_ssl,
+		this.remember_password,
+		imap_credentials,
+		info.imap.credentials_method));
+            info.set_smtp_information(new Geary.PreferencesServiceInformation(
+		Geary.Service.SMTP,
+		this.smtp_host,
+		this.smtp_port,
+		this.smtp_starttls,
+		this.smtp_ssl,
+		this.remember_password,
+		smtp_credentials,
+		info.smtp.credentials_method,
+		this.smtp_noauth,
+		this.smtp_use_imap_credentials));
             info.prefetch_period_days = get_storage_length();
             info.save_drafts = this.save_drafts;
             info.use_email_signature = this.use_email_signature;
             info.email_signature = this.email_signature;
-
-            if (smtp_noauth)
-                info.smtp.credentials = null;
 
             on_changed();
         }

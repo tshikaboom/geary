@@ -697,4 +697,12 @@ public class Geary.AccountInformation : BaseObject {
     public bool is_copy() {
         return file == null;
     }
+
+    public void set_imap_information(Geary.ServiceInformation imap_info) {
+        this.imap = imap_info;
+    }
+
+    public void set_smtp_information(Geary.ServiceInformation smtp_info) {
+        this.smtp = smtp_info;
+    }
 }
