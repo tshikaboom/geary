@@ -8,12 +8,15 @@
  * A representation of the different sources Geary might get its credentials from.
  */
 public enum Geary.CredentialsProvider {
-    LIBSECRET;
+    LIBSECRET,
+    GOA;
 
     public string to_string() {
         switch (this) {
             case LIBSECRET:
                 return "libsecret";
+            case GOA:
+                return "goa";
 
             default:
                 assert_not_reached();
@@ -24,6 +27,8 @@ public enum Geary.CredentialsProvider {
         switch (str) {
             case "libsecret":
                 return LIBSECRET;
+            case "goa":
+                return GOA;
 
             default:
                 throw new KeyFileError.INVALID_VALUE(

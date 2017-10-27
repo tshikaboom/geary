@@ -6,6 +6,16 @@
 
 public class AccountManager : GLib.Object {
 
+    private Goa.Client goa_client { get; set; default = null; }
+
+    public AccountManager() {
+        try {
+            this.goa_client = new Goa.Client.sync();
+        } catch (GLib.Error e) {
+            stdout.printf("goaerror");
+        }
+    }
+
     public async void add_existing_accounts_async(Cancellable? cancellable = null) throws Error {
         try {
             Geary.Engine.instance.user_data_dir.make_directory_with_parents(cancellable);
@@ -53,6 +63,42 @@ public class AccountManager : GLib.Object {
             Geary.Engine.instance.add_account(info);
      }
 
+    public async void add_goa_accounts_async(Cancellable? cancellable = null) throws Error {
+        GLib.List<Goa.Object> list = goa_client.get_accounts();
+        Goa.Account account;
+        Goa.PasswordBased password;
+        Goa.Mail mail;
+        Goa.Object account_object;
+        Geary.AccountInformation info;
+        Gee.List<Geary.AccountInformation> account_list = new Gee.ArrayList<Geary.AccountInformation>();
+        stdout.printf("goa list length is %u\n", list.length());
+        Geary.CredentialsMediator mediator = null;
+        for (int i=0; i < list.length(); i++) {
+            account_object = list.nth_data(i);
+            if (account_object != null) {
+                mail = account_object.get_mail();
+                account = account_object.get_account();
+                password = account_object.get_password_based();
+                if (mail != null && password != null) {
+                    stdout.printf("adding goa account %s email %s\n", account.id, mail.email_address);
+                    mediator = new GOAMediator(password);
+                    info = new Geary.AccountInformation(account.id,
+                                   Geary.Engine.instance.user_config_dir.get_child(account.id),
+                                   Geary.Engine.instance.user_data_dir.get_child(account.id),
+                                   new Geary.GOAServiceInformation(Geary.Service.IMAP, mediator, mail),
+                                   new Geary.GOAServiceInformation(Geary.Service.SMTP, mediator, mail));
+                    load_from_goa(mail, info);
+                    account_list.add(info);
+                    stdout.printf("added goa account w/ mediator %p\n", mediator);
+                    yield store_to_file(info);
+                }
+            }
+        }
+
+        foreach (Geary.AccountInformation tmp in account_list)
+            Geary.Engine.instance.add_account(tmp);
+    }
+
     /**
      * Loads an account info from a config directory.
      *
@@ -72,6 +118,7 @@ public class AccountManager : GLib.Object {
         Geary.ServiceInformation smtp_information;
         Geary.CredentialsProvider provider;
         Geary.CredentialsMethod method;
+        Goa.Object? goa_object;
 
         provider = Geary.CredentialsProvider.from_string(Geary.Config.get_string_value(key_file, Geary.Config.GROUP, Geary.Config.CREDENTIALS_PROVIDER_KEY, Geary.CredentialsProvider.LIBSECRET.to_string()));
         method = Geary.CredentialsMethod.from_string(Geary.Config.get_string_value(key_file, Geary.Config.GROUP, Geary.Config.CREDENTIALS_METHOD_KEY, Geary.CredentialsMethod.PASSWORD.to_string()));
@@ -82,6 +129,15 @@ public class AccountManager : GLib.Object {
                 imap_information = new Geary.LocalServiceInformation(Geary.Service.IMAP, Geary.Engine.instance.user_config_dir.get_child(id), mediator);
                 smtp_information = new Geary.LocalServiceInformation(Geary.Service.SMTP, Geary.Engine.instance.user_config_dir.get_child(id), mediator);
                 break;
+            case Geary.CredentialsProvider.GOA:
+                goa_object = find_goa_by_id(id);
+                if (goa_object != null) {
+                    mediator = new GOAMediator(goa_object.get_password_based());
+                    stdout.printf("got new GOAMediator\n");
+                    imap_information = new Geary.GOAServiceInformation(Geary.Service.IMAP, mediator, goa_object.get_mail());
+                    smtp_information = new Geary.GOAServiceInformation(Geary.Service.SMTP, mediator, goa_object.get_mail());
+                    break;
+                } else return null;
             default:
                 mediator = null;
                 imap_information = null;
@@ -158,6 +214,54 @@ public class AccountManager : GLib.Object {
         info.save_drafts = Geary.Config.get_bool_value(key_file, Geary.Config.GROUP, Geary.Config.SAVE_DRAFTS_KEY, true);
 
         return info;
+    }
+
+    /**
+     * Loads an account info from a config directory.
+     *
+     * Throws an error if the config file was not found, could not be
+     * parsed, or doesn't have all required fields.
+     */
+    private void load_from_goa(Goa.Mail mail, Geary.AccountInformation info) {
+
+
+        // This is the only required value at the moment?
+        string primary_email = mail.email_address;
+        string real_name = mail.name;
+
+        info.primary_mailbox = new Geary.RFC822.MailboxAddress(real_name, primary_email);
+        info.nickname = "GOA Account";
+        try {
+            info.imap.load_credentials();
+            info.smtp.load_credentials();
+        } catch (GLib.Error e) {
+            stdout.printf("error1\n");
+        }
+
+        if (info.ordinal >= Geary.AccountInformation.default_ordinal)
+            Geary.AccountInformation.default_ordinal = info.ordinal + 1;
+
+        try {
+            info.imap.load_settings();
+            info.smtp.load_settings();
+        } catch (GLib.Error e) {
+            stdout.printf("error2\n");
+        }
+
+    }
+
+    private Goa.Object? find_goa_by_id(string id) {
+        GLib.List<Goa.Object> list = goa_client.get_accounts();
+        Goa.Account account;
+        Goa.Object account_object;
+         for (int i=0; i < list.length(); i++) {
+            account_object = list.nth_data(i);
+            account = account_object.get_account();
+            if (account.id == id)
+                return account_object;
+         }
+
+         return null;
     }
 
     public static async void store_to_file(Geary.AccountInformation info, Cancellable? cancellable = null) {

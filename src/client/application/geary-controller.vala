@@ -290,6 +290,9 @@ public class GearyController : Geary.BaseObject {
             stdout.printf("adding local accounts...\n");
             AccountManager manager = new AccountManager();
             yield manager.add_existing_accounts_async(null);
+            stdout.printf("adding goa accounts...\n");
+            yield manager.add_goa_accounts_async(null);
+
             if (Geary.Engine.instance.get_accounts().size == 0) {
                 create_account();
             }

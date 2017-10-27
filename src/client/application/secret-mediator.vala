@@ -171,8 +171,12 @@ public class SecretMediator : Geary.CredentialsMediator, Object {
 
         HashTable<string,string> table = new HashTable<string,string>(str_hash, str_equal);
         table.insert(ATTR_PROTO, service.name());
+        stdout.printf("secretmediator: acct id %s\n", account.id);
+        stdout.printf("%s %s\n", ATTR_PROTO, service.name());
         table.insert(ATTR_HOST, host);
+        stdout.printf("%s %s\n", ATTR_HOST, host);
         table.insert(ATTR_LOGIN, login);
+        stdout.printf("%s %s\n", ATTR_LOGIN, login);
         return table;
     }
 
